@@ -111,7 +111,8 @@ app.get('/api/screens', requireAuth, async (req, res) => {
         id: s.screenId,
         authorized: s.authorized,
         online: Object.values(connectedSockets).some(sock => sock.screenId === s.screenId),
-        name: s.name
+        name: s.name,
+        lastSeen: s.lastSeen
     }));
 
     // Pantallas online pero NO en BD (nuevas)
@@ -337,6 +338,12 @@ io.on('connection', (socket) => {
         console.log(`Pantalla conectada: ${screenId}`);
         
         const screen = await Screen.findOne({ where: { screenId } });
+
+        if (screen) {
+            screen.lastSeen = new Date();
+            await screen.save();
+        }
+
         if (screen && screen.authorized) {
             socket.emit('authorization_change', { authorized: true });
             const playlist = await getEffectivePlaylist(screenId);

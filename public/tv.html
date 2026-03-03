@@ -214,6 +214,12 @@
             currentIndex = (currentIndex + 1) % currentPlaylist.length;
             showCurrentItem();
         }
+        // Heartbeat cada minuto
+        setInterval(() => {
+            if(socket && screenName) {
+                socket.emit('heartbeat', screenName);
+            }
+        }, 60000);
     </script>
 </body>
 </html>

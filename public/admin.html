@@ -211,8 +211,29 @@
 
         @media (min-width: 901px) {
             .mobile-controls { display: none; }
-            .item-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; }
-            .item-preview { width: 60px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
+            .item-left { display: flex; align-items: center; gap: 15px; flex: 1; min-width: 200px; }
+            .item-preview { width: 80px; height: 50px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+            
+            /* Botón de eliminar mejorado en PC */
+            .item-controls button {
+                background: #fff0f0;
+                color: #dc3545;
+                border: 1px solid #ffcccc;
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                font-size: 1.1em;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+                cursor: pointer;
+            }
+            .item-controls button:hover {
+                background: #dc3545;
+                color: white;
+                transform: scale(1.1);
+            }
         }
     </style>
 </head>
