@@ -16,6 +16,11 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/uploads', express.static('public/uploads'));
 
+// Redirección raíz -> tv.html
+app.get('/', (req, res) => {
+    res.redirect('/tv.html');
+});
+
 // Directorios
 const uploadDir = path.join(__dirname, 'public/uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
