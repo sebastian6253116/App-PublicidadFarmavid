@@ -73,9 +73,34 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        const params = new URLSearchParams(window.location.search);
-        const myScreenId = params.get('id') || 'TV-' + Math.floor(Math.random() * 1000);
         
+        // GESTIÓN DE ID DE PANTALLA PERSISTENTE
+        // 1. Buscar en URL (?id=...)
+        const params = new URLSearchParams(window.location.search);
+        let myScreenId = params.get('id');
+
+        // 2. Si no hay en URL, buscar en LocalStorage
+        if (!myScreenId) {
+            myScreenId = localStorage.getItem('tv_device_id');
+        }
+
+        // 3. Si no existe, generar uno NUEVO TEMPORAL (se guardará solo si se autoriza)
+        // Nota: El usuario pidió que CAMBIE si no está autorizada al refrescar.
+        // Por lo tanto, si no está autorizado, generamos uno nuevo siempre al cargar si no venía en URL.
+        // Pero espera, si ya estaba autorizado, debe "recordarlo".
+        
+        // Lógica refinada:
+        // - Si hay ID en URL, usar ese (prioridad máxima).
+        // - Si hay ID en LocalStorage, usar ese (significa que ya fue "registrado" o "autorizado" antes).
+        // - Si NO hay en ninguno, generar uno nuevo aleatorio.
+        
+        if (!myScreenId) {
+            myScreenId = 'TV-' + Math.floor(Math.random() * 10000);
+        }
+
+        // Variable para controlar si guardamos el ID
+        let currentIdIsSaved = !!localStorage.getItem('tv_device_id');
+
         const statusTitle = document.getElementById('statusTitle');
         const statusDesc = document.getElementById('statusDesc');
         const statusMsg = document.getElementById('statusMsg');
@@ -110,10 +135,26 @@
         socket.on('authorization_change', (data) => {
             isAuthorized = data.authorized;
             if (isAuthorized) {
+                // ¡AUTORIZADA! -> Guardar ID para siempre
+                localStorage.setItem('tv_device_id', myScreenId);
+                currentIdIsSaved = true;
+
                 statusTitle.innerText = "Esperando contenido...";
                 resetSlots();
                 statusMsg.style.display = 'block';
             } else {
+                // NO AUTORIZADA
+                
+                // Si NO estaba guardada previamente (es nueva), borrar del storage para que al refrescar cambie
+                // Si YA estaba guardada (era una TV vieja que desautorizamos), mantenemos el ID por si la vuelven a autorizar?
+                // El requerimiento dice: "si esta no es autorizada cambie tantas veces el usuario refresque"
+                // Esto implica que si le quito el permiso, debería olvidar su ID?
+                // Generalmente, si le quito el permiso es para bloquearla. Si refresca, generará otro ID y aparecerá como nueva.
+                // Vamos a borrar el ID del storage si no está autorizada.
+                
+                localStorage.removeItem('tv_device_id');
+                currentIdIsSaved = false;
+
                 clearTimeout(rotationTimer);
                 resetSlots();
                 statusMsg.style.display = 'block';
@@ -216,8 +257,8 @@
         }
         // Heartbeat cada minuto
         setInterval(() => {
-            if(socket && screenName) {
-                socket.emit('heartbeat', screenName);
+            if(socket && myScreenId) {
+                socket.emit('heartbeat', myScreenId);
             }
         }, 60000);
     </script>
