@@ -50,13 +50,21 @@ let connectedSockets = {};
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     try {
-        const user = await User.findOne({ where: { username, password } });
-        if (user) {
-            res.json({ success: true, token: 'admin-token-secret', username: user.username });
-        } else {
-            res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
+        const user = await User.findOne({ where: { username } });
+        
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
         }
-    } catch (e) { res.status(500).json({ message: 'Error interno' }); }
+
+        if (user.password !== password) {
+            return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
+        }
+
+        res.json({ success: true, token: 'admin-token-secret', username: user.username });
+    } catch (e) {
+        console.error('Login Error:', e);
+        res.status(500).json({ message: 'Error interno de servidor: ' + e.message });
+    }
 });
 
 app.get('/api/users', requireAuth, async (req, res) => {

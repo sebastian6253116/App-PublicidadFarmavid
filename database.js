@@ -57,14 +57,18 @@ const initDB = async () => {
         console.log('✅ Conexión a MySQL exitosa.');
         
         // Sincronizar modelos (crear tablas si no existen)
-        // En producción usar migraciones, aquí sync para prototipo rápido
         await sequelize.sync({ alter: true });
         
         // Crear admin por defecto si no existe
-        const admin = await User.findOne({ where: { username: 'admin' } });
-        if (!admin) {
-            await User.create({ username: 'admin', password: '123' });
+        const [admin, created] = await User.findOrCreate({
+            where: { username: 'admin' },
+            defaults: { password: '123' }
+        });
+        
+        if (created) {
             console.log('👤 Usuario admin creado por defecto.');
+        } else {
+            console.log('👤 Usuario admin ya existe.');
         }
         
     } catch (error) {
