@@ -1,58 +1,32 @@
 # Guía de Despliegue en Dokploy
 
-Sigue estos pasos para desplegar tu aplicación en un VPS utilizando Dokploy.
+## 1. Configuración de Variables de Entorno (IMPORTANTE)
 
-## 1. Preparación del Proyecto (Ya realizado)
-Hemos añadido un `Dockerfile` y un script de inicio (`npm start`) al repositorio. Esto asegura que Dokploy sepa exactamente cómo construir y ejecutar tu aplicación.
+Para que la aplicación se conecte a tu base de datos MySQL en producción, debes configurar las siguientes variables de entorno en la pestaña **"Environment"** de tu aplicación en Dokploy:
 
-## 2. Configuración en Dokploy
+```env
+DB_HOST=mysql-publicidad  # Nombre del servicio MySQL en Dokploy (o la IP interna si es externo)
+DB_PORT=3306              # Puerto interno de Docker (usualmente 3306 entre contenedores)
+DB_USER=publicidad
+DB_PASS=8SPMzGNXyQ93oHyAw87R
+DB_NAME=AppPublicidad
+```
 
-1.  **Ingresa a tu panel de Dokploy.**
-2.  Ve a la sección **"Projects"** (Proyectos) y crea uno nuevo (ej. `PublicidadTV`).
-3.  Dentro del proyecto, haz clic en **"Create Service"** (Crear Servicio) -> **"Application"**.
-4.  Ponle un nombre (ej. `app-tv`) y selecciona **GitHub** como proveedor.
-5.  Selecciona tu repositorio: `sebastian6253116/App-PublicidadFarmavid`.
-6.  Branch: `master`.
+**Nota sobre la conexión:**
+*   Si la base de datos y la aplicación están en el mismo Dokploy, usa el **Nombre del Servicio** (ej. `mysql-publicidad`) como `DB_HOST` y el puerto `3306`.
+*   Si te conectas desde fuera (tu PC local), usa la IP `38.171.255.22` y el puerto `3311`.
+*   Pero **dentro del servidor (entre contenedores)**, es más rápido y seguro usar la red interna de Docker.
 
-## 3. Configuración del Servicio
+## 2. Persistencia de Datos (Volúmenes)
 
-Una vez creado el servicio, ve a la pestaña **"Environment"** o **"General"**:
+Asegúrate de tener mapeado el volumen para las imágenes:
 
-*   **Build Type:** Selecciona `Dockerfile`.
-*   **Context Path:** `/`
-*   **Docker Image path:** `/Dockerfile`
-
-## 4. Persistencia de Datos (¡Muy Importante!)
-
-Para que no pierdas las imágenes subidas ni la configuración de usuarios/pantallas cada vez que actualices la app, debes configurar los **Volúmenes**.
-
-Ve a la pestaña **"Volumes"** (o "Advanced" -> "Volumes") y agrega dos entradas:
-
-| Host Path (Ruta en el VPS) | Container Path (Ruta en la App) |
+| Host Path | Container Path |
 | :--- | :--- |
 | `/etc/dokploy/volumes/app-tv/uploads` | `/app/public/uploads` |
-| `/etc/dokploy/volumes/app-tv/data` | `/app/data` |
 
-*Nota: La "Host Path" puede ser cualquier carpeta de tu servidor donde quieras guardar los datos. Asegúrate de que exista o que Dokploy tenga permisos para crearla.*
+*(Ya no necesitas el volumen de `data` para JSON porque ahora todo está en MySQL).*
 
-## 5. Dominio y Red
+## 3. Despliegue Automático
 
-1.  Ve a la pestaña **"Network"** o **"Domains"**.
-2.  Agrega tu dominio (ej. `tv.farmavid.com`).
-3.  **Container Port:** `3000`.
-4.  Activa **HTTPS** (Let's Encrypt) para tener conexión segura.
-
-## 6. Desplegar
-
-1.  Haz clic en el botón **"Deploy"**.
-2.  Espera a que termine el proceso de "Build". Puedes ver los logs en la pestaña "Logs".
-
-## 7. Verificación
-
-Entra a tu dominio (`https://tv.farmavid.com`).
-*   Deberías ver la pantalla de Login del Admin.
-*   **Usuario:** `admin` / **Password:** `123` (Si es la primera vez).
-
----
-**Nota sobre WebSockets (Socket.io):**
-Como usamos Socket.io, es posible que necesites activar "WebSockets Support" en la configuración de Nginx/Traefik de Dokploy si notas que se desconecta frecuentemente. Generalmente funciona por defecto.
+Al haber subido los cambios al repositorio, si tienes activado el "Auto Deploy" en Dokploy (generalmente por defecto al conectar GitHub), la aplicación se actualizará sola en unos minutos. Si no, dale al botón **"Deploy"** manualmente.
