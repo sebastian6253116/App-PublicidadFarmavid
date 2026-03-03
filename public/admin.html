@@ -49,7 +49,6 @@
         <h1>📺 Panel de Control</h1>
         <div>
             <span id="currentUser" style="margin-right: 10px; font-weight: bold;"></span>
-            <button class="logout-btn" onclick="changeMyPassword()" style="border-color:#007bff; color:#007bff; margin-right:5px;">Cambiar Clave</button>
             <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
         </div>
     </div>
@@ -263,45 +262,7 @@
             alert('Contraseña actualizada');
         }
 
-        async function changeMyPassword() {
-            const newPass = prompt('Ingresa tu nueva contraseña:');
-            if(!newPass) return;
-            
-            // Necesitamos saber mi propio ID. Como no lo guardamos en localStorage,
-            // podemos hacer una llamada para "buscarme" o asumir que el backend tiene un endpoint "/me".
-            // Para simplificar, buscaremos mi usuario en la lista de usuarios (si soy admin)
-            // O mejor: implementamos un endpoint "change-my-password" en el backend o buscamos el ID.
-            
-            // Estrategia rápida: Obtener mi ID de la lista de usuarios (si tengo acceso)
-            // O más robusto: el backend debería decodificar el usuario.
-            // Dado que solo 'admin' ve la lista, los usuarios normales no sabrían su ID fácilmente.
-            // Vamos a agregar un endpoint simple en el frontend que itera para buscarse a sí mismo
-            // OJO: Si no soy admin, la API /api/users podría estar bloqueada?
-            // En el código actual del servidor: `app.get('/api/users', requireAuth ...)` devuelve todos.
-            // Así que cualquier usuario autenticado puede ver la lista.
-            
-            try {
-                const res = await fetch('/api/users', { headers: apiHeaders });
-                const users = await res.json();
-                const myUser = users.find(u => u.username === localStorage.getItem('admin_user'));
-                
-                if (myUser) {
-                    await fetch(`/api/users/${myUser.id}/password`, {
-                        method: 'PUT',
-                        headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ password: newPass })
-                    });
-                    alert('Tu contraseña ha sido actualizada');
-                } else {
-                    alert('Error al identificar usuario');
-                }
-            } catch(e) {
-                console.error(e);
-                alert('Error al cambiar contraseña');
-            }
-        }
-
-        // --- PLAYLIST MANAGER ---
+        // --- GESTIÓN DE USUARIOS ---
         async function loadPlaylist() {
             const target = document.getElementById('targetScreenSelect').value;
             const container = document.getElementById('playlistContainer');
