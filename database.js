@@ -56,8 +56,10 @@ const initDB = async () => {
         await sequelize.authenticate();
         console.log('✅ Conexión a MySQL exitosa.');
         
-        // Sincronizar modelos (crear tablas si no existen)
+        // Sincronizar modelos (crear tablas si no existen o ALTER si cambiaron)
+        // 'alter: true' intenta adaptar la tabla a los nuevos campos (como lastSeen)
         await sequelize.sync({ alter: true });
+        console.log('✅ Base de datos sincronizada (alter: true).');
         
         // Crear admin por defecto si no existe
         const [admin, created] = await User.findOrCreate({
