@@ -1,0 +1,10 @@
+{
+  "TV-746": {
+    "name": "TV-746",
+    "authorized": false
+  },
+  "TV-70": {
+    "name": "TV-70",
+    "authorized": true
+  }
+}

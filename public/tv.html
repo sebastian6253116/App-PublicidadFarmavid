@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>TV Player</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+        
+        .slide-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .slide-item {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: contain; /* Ajuste para ver todo el contenido */
+            opacity: 0;
+            transition: opacity 1s ease;
+            z-index: 0;
+            background: black; /* Fondo negro para videos con aspect ratio distinto */
+        }
+
+        .slide-item.active { opacity: 1; z-index: 2; }
+
+        /* Efectos */
+        .effect-fade { transition: opacity 1.5s ease-in-out; }
+        
+        .effect-slide-left { transform: translateX(100%); transition: transform 0.8s ease-out; opacity: 1; }
+        .effect-slide-left.active { transform: translateX(0); }
+        .effect-slide-left.exit { transform: translateX(-100%); z-index: 1; }
+
+        .effect-slide-right { transform: translateX(-100%); transition: transform 0.8s ease-out; opacity: 1; }
+        .effect-slide-right.active { transform: translateX(0); }
+        .effect-slide-right.exit { transform: translateX(100%); z-index: 1; }
+
+        .effect-zoom-in { transform: scale(0.8); opacity: 0; transition: all 1s ease; }
+        .effect-zoom-in.active { transform: scale(1); opacity: 1; }
+
+        .effect-none { transition: none !important; }
+
+        /* UI Overlay */
+        #statusMsg {
+            color: white; font-family: 'Segoe UI', sans-serif; text-align: center;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80%; z-index: 5;
+        }
+        #fsBtn {
+            position: absolute; bottom: 20px; right: 20px; padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2); color: white;
+            border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 5px;
+            cursor: pointer; z-index: 100; transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <button id="fsBtn">⛶</button>
+
+    <div id="statusMsg">
+        <h1 id="statusTitle">Conectando...</h1>
+        <p id="statusDesc">...</p>
+    </div>
+
+    <!-- Contenedor Doble Buffer Generico (divs que pueden tener img o video dentro) -->
+    <div id="displayContainer" class="slide-container">
+        <!-- Slot A -->
+        <div id="slot0" class="slide-item"></div>
+        <!-- Slot B -->
+        <div id="slot1" class="slide-item"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const params = new URLSearchParams(window.location.search);
+        const myScreenId = params.get('id') || 'TV-' + Math.floor(Math.random() * 1000);
+        
+        const statusTitle = document.getElementById('statusTitle');
+        const statusDesc = document.getElementById('statusDesc');
+        const statusMsg = document.getElementById('statusMsg');
+        
+        // Slots
+        const slots = [document.getElementById('slot0'), document.getElementById('slot1')];
+        let currentSlotIndex = 0;
+
+        let currentPlaylist = [];
+        let currentIndex = 0;
+        let rotationTimer = null;
+        let isAuthorized = false;
+
+        // Fullscreen
+        const fsBtn = document.getElementById('fsBtn');
+        fsBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(e=>console.log(e));
+            else if (document.exitFullscreen) document.exitFullscreen();
+        });
+        document.addEventListener('fullscreenchange', () => {
+            fsBtn.style.display = document.fullscreenElement ? 'none' : 'block';
+            document.body.style.cursor = document.fullscreenElement ? 'none' : 'default';
+        });
+
+        // Socket
+        socket.on('connect', () => {
+            statusTitle.innerText = "Conectado";
+            statusDesc.innerText = `ID: ${myScreenId}`;
+            socket.emit('register_screen', myScreenId);
+        });
+
+        socket.on('authorization_change', (data) => {
+            isAuthorized = data.authorized;
+            if (isAuthorized) {
+                statusTitle.innerText = "Esperando contenido...";
+                resetSlots();
+                statusMsg.style.display = 'block';
+            } else {
+                clearTimeout(rotationTimer);
+                resetSlots();
+                statusMsg.style.display = 'block';
+                statusTitle.innerText = "⛔ No Autorizada";
+                statusTitle.style.color = "#ff6b6b";
+            }
+        });
+
+        socket.on('update_playlist', (playlist) => {
+            if (!isAuthorized) return;
+            currentPlaylist = playlist;
+            currentIndex = 0;
+            startPlayback();
+        });
+
+        function resetSlots() {
+            slots[0].className = 'slide-item';
+            slots[0].innerHTML = '';
+            slots[1].className = 'slide-item';
+            slots[1].innerHTML = '';
+        }
+
+        function startPlayback() {
+            if (rotationTimer) clearTimeout(rotationTimer);
+
+            if (!currentPlaylist || currentPlaylist.length === 0) {
+                resetSlots();
+                statusMsg.style.display = 'block';
+                statusTitle.innerText = "Playlist Vacía";
+                statusTitle.style.color = "white";
+                return;
+            }
+
+            statusMsg.style.display = 'none';
+            showCurrentItem();
+        }
+
+        function showCurrentItem() {
+            if (currentPlaylist.length === 0) return;
+            
+            const item = currentPlaylist[currentIndex];
+            const nextSlotIndex = (currentSlotIndex + 1) % 2;
+            const currentSlot = slots[currentSlotIndex];
+            const nextSlot = slots[nextSlotIndex];
+
+            // Preparar contenido en el siguiente slot
+            nextSlot.innerHTML = ''; // Limpiar previo
+            let element;
+
+            if (item.type === 'video') {
+                element = document.createElement('video');
+                element.src = item.url;
+                element.muted = true;
+                element.autoplay = true;
+                element.playsInline = true;
+                element.style.width = '100%';
+                element.style.height = '100%';
+                element.style.objectFit = 'contain';
+                
+                // Evento para cuando termine el video
+                element.onended = () => {
+                    nextSlide();
+                };
+                // Fallback por si falla autoplay
+                element.onerror = () => nextSlide();
+            } else {
+                element = document.createElement('img');
+                element.src = item.url;
+                element.style.width = '100%';
+                element.style.height = '100%';
+                element.style.objectFit = 'contain';
+            }
+            
+            nextSlot.appendChild(element);
+
+            // Aplicar Transición
+            const effect = item.transition || 'fade';
+            nextSlot.className = `slide-item effect-${effect}`;
+            currentSlot.className = `slide-item effect-${effect} exit`;
+
+            void nextSlot.offsetWidth; // Force reflow
+
+            nextSlot.classList.add('active');
+            currentSlot.classList.remove('active');
+
+            // Actualizar índice de slot
+            currentSlotIndex = nextSlotIndex;
+
+            // Programar siguiente (solo para imágenes, video se maneja por evento onended)
+            if (item.type !== 'video') {
+                rotationTimer = setTimeout(() => {
+                    nextSlide();
+                }, item.duration || 5000);
+            }
+        }
+
+        function nextSlide() {
+            currentIndex = (currentIndex + 1) % currentPlaylist.length;
+            showCurrentItem();
+        }
+    </script>
+</body>
+</html>

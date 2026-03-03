@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Playlist</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; background: #f0f2f5; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .logout-btn { background: none; border: 1px solid #dc3545; color: #dc3545; padding: 5px 15px; border-radius: 4px; cursor: pointer; }
+        
+        .grid { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+        @media(max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h2, h3 { color: #333; margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        
+        label { display: block; margin-top: 10px; font-weight: 600; color: #555; font-size: 0.9em; }
+        input, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        
+        .btn { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; width: 100%; margin-top: 10px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-sm { width: auto; padding: 4px 8px; font-size: 0.8em; margin: 0; }
+        
+        /* Playlist Items */
+        #playlistContainer { min-height: 100px; border: 2px dashed #ddd; padding: 10px; border-radius: 6px; background: #fafafa; }
+        .playlist-item { 
+            display: flex; align-items: center; justify-content: space-between; 
+            background: white; border: 1px solid #eee; padding: 10px; margin-bottom: 5px; border-radius: 4px; 
+            cursor: grab; transition: transform 0.2s;
+        }
+        .playlist-item:hover { background: #f8f9fa; border-color: #ccc; }
+        .playlist-item.dragging { opacity: 0.5; border: 2px dashed #007bff; }
+        
+        .item-preview { width: 60px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; margin-right: 10px; }
+        .item-info { flex: 1; }
+        .item-controls { display: flex; gap: 5px; }
+
+        .type-badge { font-size: 0.7em; padding: 2px 5px; border-radius: 3px; font-weight: bold; text-transform: uppercase; }
+        .badge-video { background: #e3f2fd; color: #1565c0; }
+        .badge-image { background: #e8f5e9; color: #2e7d32; }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📺 Panel de Control</h1>
+        <div>
+            <span id="currentUser" style="margin-right: 10px; font-weight: bold;"></span>
+            <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <div class="grid">
+        <!-- Izquierda: Configuración -->
+        <div>
+            <div class="card">
+                <h2>📡 Pantallas</h2>
+                <div id="screenListContainer">Cargando...</div>
+            </div>
+
+            <div class="card">
+                <h2>🚀 Subir Contenido</h2>
+                <form id="uploadForm">
+                    <label>1. Destino:</label>
+                    <select name="targetScreen" id="targetScreenSelect" onchange="loadPlaylist()">
+                        <option value="ALL">🌍 Global (Todas)</option>
+                    </select>
+
+                    <label>2. Archivos (Img/Video):</label>
+                    <input type="file" name="media" accept="image/*,video/*" multiple required lang="es">
+
+                    <label>3. Duración (Imágenes):</label>
+                    <input type="number" name="duration" value="10" min="3">
+                    <small style="color:#666; font-size:0.8em">* Videos usan su propia duración</small>
+
+                    <label>4. Transición (Imágenes):</label>
+                    <select name="transition">
+                        <option value="fade">Suave (Fade)</option>
+                        <option value="slide-left">Deslizar Izq</option>
+                        <option value="slide-right">Deslizar Der</option>
+                        <option value="zoom-in">Zoom In</option>
+                        <option value="none">Ninguno</option>
+                    </select>
+
+                    <button type="submit" class="btn btn-primary">Subir y Agregar</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Derecha: Gestor de Playlist -->
+        <div>
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>📋 Playlist Actual</h2>
+                    <button class="btn btn-sm btn-success" onclick="saveOrder()">💾 Guardar Orden</button>
+                </div>
+                <p id="playlistStatus" style="color:#666; font-size:0.9em; margin-bottom:10px;">
+                    Arrastra los elementos para reordenar y pulsa "Guardar Orden".
+                </p>
+                
+                <div id="playlistContainer">
+                    <p style="text-align:center; color:#999; margin-top:30px;">Selecciona una pantalla para ver su contenido</p>
+                </div>
+
+                <div style="margin-top: 15px; text-align: right;">
+                    <button class="btn btn-sm btn-danger" onclick="clearPlaylist()">🗑️ Vaciar Todo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('admin_token');
+        if (!token) window.location.href = '/login.html';
+        document.getElementById('currentUser').textContent = localStorage.getItem('admin_user');
+
+        const apiHeaders = { 'Authorization': token };
+        let currentPlaylistData = [];
+
+        function logout() {
+            localStorage.removeItem('admin_token');
+            window.location.href = '/login.html';
+        }
+
+        // --- CARGA INICIAL ---
+        async function loadScreens() {
+            try {
+                const res = await fetch('/api/screens', { headers: apiHeaders });
+                if (res.status === 401) return logout();
+                const screens = await res.json();
+                renderScreens(screens);
+                updateSelect(screens);
+            } catch (e) { console.error(e); }
+        }
+
+        function renderScreens(screens) {
+            const container = document.getElementById('screenListContainer');
+            container.innerHTML = '';
+            screens.forEach(s => {
+                const div = document.createElement('div');
+                div.style.padding = '5px 0';
+                div.style.borderBottom = '1px solid #eee';
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>${s.name} <small style="color:${s.online?'green':'gray'}">●</small></span>
+                        ${s.authorized 
+                            ? `<button class="btn-sm btn-danger" onclick="toggleAuth('${s.id}', false)">Bloquear</button>` 
+                            : `<button class="btn-sm btn-success" onclick="toggleAuth('${s.id}', true)">Autorizar</button>`}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function toggleAuth(id, authorized) {
+            await fetch(`/api/screens/${id}/authorize`, {
+                method: 'POST',
+                headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ authorized })
+            });
+            loadScreens();
+        }
+
+        function updateSelect(screens) {
+            const select = document.getElementById('targetScreenSelect');
+            const current = select.value;
+            select.innerHTML = '<option value="ALL">🌍 Global (Todas)</option>';
+            screens.filter(s => s.authorized).forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = `🖥️ ${s.name}`;
+                select.appendChild(opt);
+            });
+            if (current) select.value = current;
+            loadPlaylist(); // Cargar playlist del seleccionado
+        }
+
+        // --- PLAYLIST MANAGER ---
+        async function loadPlaylist() {
+            const target = document.getElementById('targetScreenSelect').value;
+            const container = document.getElementById('playlistContainer');
+            container.innerHTML = '<p>Cargando...</p>';
+            
+            try {
+                const res = await fetch(`/api/playlist/${target}`, { headers: apiHeaders });
+                currentPlaylistData = await res.json();
+                renderPlaylist();
+            } catch(e) { container.innerHTML = 'Error al cargar'; }
+        }
+
+        function renderPlaylist() {
+            const container = document.getElementById('playlistContainer');
+            container.innerHTML = '';
+            
+            if (currentPlaylistData.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#999;">Lista vacía</p>';
+                return;
+            }
+
+            currentPlaylistData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'playlist-item';
+                div.draggable = true;
+                div.dataset.index = index;
+                
+                const preview = item.type === 'video' 
+                    ? `<video src="${item.url}" class="item-preview" muted></video>`
+                    : `<img src="${item.url}" class="item-preview">`;
+
+                const badge = item.type === 'video' 
+                    ? `<span class="type-badge badge-video">VIDEO</span>` 
+                    : `<span class="type-badge badge-image">IMG (${item.duration/1000}s)</span>`;
+
+                div.innerHTML = `
+                    <div style="display:flex; align-items:center;">
+                        <span style="margin-right:10px; color:#ccc; cursor:move;">☰</span>
+                        ${preview}
+                        <div class="item-info">
+                            <div style="font-weight:bold; font-size:0.9em;">${item.name || 'Sin nombre'}</div>
+                            <div>${badge}</div>
+                        </div>
+                    </div>
+                    <div class="item-controls">
+                        <button class="btn-sm btn-danger" onclick="removeItem(${index})">✕</button>
+                    </div>
+                `;
+                
+                // Eventos Drag & Drop
+                div.addEventListener('dragstart', handleDragStart);
+                div.addEventListener('dragover', handleDragOver);
+                div.addEventListener('drop', handleDrop);
+                div.addEventListener('dragenter', handleDragEnter);
+                div.addEventListener('dragleave', handleDragLeave);
+                
+                container.appendChild(div);
+            });
+        }
+
+        // --- DRAG & DROP LOGIC ---
+        let dragSrcEl = null;
+
+        function handleDragStart(e) {
+            dragSrcEl = this;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+            this.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) { this.classList.add('over'); }
+        function handleDragLeave(e) { this.classList.remove('over'); }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) e.stopPropagation();
+            if (dragSrcEl !== this) {
+                // Intercambiar datos en array
+                const fromIndex = parseInt(dragSrcEl.dataset.index);
+                const toIndex = parseInt(this.dataset.index);
+                
+                // Mover elemento en array
+                const item = currentPlaylistData.splice(fromIndex, 1)[0];
+                currentPlaylistData.splice(toIndex, 0, item);
+                
+                renderPlaylist(); // Re-renderizar todo
+            }
+            return false;
+        }
+
+        function removeItem(index) {
+            if(!confirm('¿Borrar elemento?')) return;
+            currentPlaylistData.splice(index, 1);
+            renderPlaylist();
+        }
+
+        async function saveOrder() {
+            const target = document.getElementById('targetScreenSelect').value;
+            try {
+                const res = await fetch('/api/playlist/update', {
+                    method: 'POST',
+                    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetScreen: target, newPlaylist: currentPlaylistData })
+                });
+                const data = await res.json();
+                alert(data.message);
+            } catch(e) { alert('Error al guardar'); }
+        }
+
+        async function clearPlaylist() {
+            if(!confirm('¿Vaciar TODA la lista?')) return;
+            const target = document.getElementById('targetScreenSelect').value;
+            await fetch('/api/clear', {
+                method: 'POST',
+                headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetScreen: target })
+            });
+            loadPlaylist();
+        }
+
+        // --- UPLOAD ---
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                const res = await fetch('/api/publish', { method: 'POST', headers: { 'Authorization': token }, body: formData });
+                const data = await res.json();
+                alert(data.message);
+                e.target.reset();
+                loadPlaylist(); // Recargar para ver los nuevos items
+            } catch (err) { alert('Error al subir'); }
+        });
+
+        // Init
+        loadScreens();
+        setInterval(loadScreens, 10000); // Refrescar estado pantallas
+    </script>
+</body>
+</html>
