@@ -2,46 +2,143 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Playlist</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; background: #f0f2f5; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .logout-btn { background: none; border: 1px solid #dc3545; color: #dc3545; padding: 5px 15px; border-radius: 4px; cursor: pointer; }
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --danger: #dc3545;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+        }
         
-        .grid { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
-        @media(max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            padding: 20px; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: var(--bg);
+            color: #333;
+        }
 
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        h2, h3 { color: #333; margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        /* Header Responsive */
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            flex-wrap: wrap; 
+            gap: 15px;
+        }
+        .header h1 { margin: 0; font-size: 1.5rem; }
+        .header > div { display: flex; gap: 10px; align-items: center; }
+
+        .logout-btn { 
+            background: none; 
+            border: 1px solid var(--danger); 
+            color: var(--danger); 
+            padding: 6px 15px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 0.9rem;
+        }
+
+        /* Layout Grid */
+        .grid { 
+            display: grid; 
+            grid-template-columns: 300px 1fr; 
+            gap: 20px; 
+            align-items: start;
+        }
+
+        /* Cards */
+        .card { 
+            background: var(--card-bg); 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+            margin-bottom: 20px; 
+        }
+        h2 { font-size: 1.2rem; margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        h3 { font-size: 1rem; margin-top: 15px; margin-bottom: 10px; }
+
+        /* Forms */
+        label { display: block; margin-top: 15px; font-weight: 600; color: #555; font-size: 0.9em; }
+        input, select { 
+            width: 100%; 
+            padding: 10px; 
+            margin-top: 5px; 
+            border: 1px solid #ddd; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            font-size: 1rem;
+        }
         
-        label { display: block; margin-top: 10px; font-weight: 600; color: #555; font-size: 0.9em; }
-        input, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        
-        .btn { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; width: 100%; margin-top: 10px; }
-        .btn-primary { background: #007bff; color: white; }
-        .btn-success { background: #28a745; color: white; }
-        .btn-warning { background: #ffc107; color: #333; }
-        .btn-danger { background: #dc3545; color: white; }
-        .btn-sm { width: auto; padding: 4px 8px; font-size: 0.8em; margin: 0; }
-        
+        .btn { 
+            padding: 12px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            transition: 0.2s; 
+            width: 100%; 
+            margin-top: 15px; 
+            font-size: 1rem;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-sm { width: auto; padding: 5px 10px; font-size: 0.85em; margin: 0; }
+
         /* Playlist Items */
         #playlistContainer { min-height: 100px; border: 2px dashed #ddd; padding: 10px; border-radius: 6px; background: #fafafa; }
-        .playlist-item { 
-            display: flex; align-items: center; justify-content: space-between; 
-            background: white; border: 1px solid #eee; padding: 10px; margin-bottom: 5px; border-radius: 4px; 
-            cursor: grab; transition: transform 0.2s;
-        }
-        .playlist-item:hover { background: #f8f9fa; border-color: #ccc; }
-        .playlist-item.dragging { opacity: 0.5; border: 2px dashed #007bff; }
         
-        .item-preview { width: 60px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; margin-right: 10px; }
-        .item-info { flex: 1; }
-        .item-controls { display: flex; gap: 5px; }
-
-        .type-badge { font-size: 0.7em; padding: 2px 5px; border-radius: 3px; font-weight: bold; text-transform: uppercase; }
+        .playlist-item { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            background: white; 
+            border: 1px solid #eee; 
+            padding: 10px; 
+            margin-bottom: 8px; 
+            border-radius: 6px; 
+            cursor: grab; 
+            transition: transform 0.2s, box-shadow 0.2s;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .playlist-item:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .playlist-item.dragging { opacity: 0.5; border: 2px dashed var(--primary); }
+        
+        .item-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; }
+        .item-preview { width: 60px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
+        .item-info { flex: 1; overflow: hidden; }
+        .item-name { font-weight: bold; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .type-badge { font-size: 0.7em; padding: 2px 6px; border-radius: 3px; font-weight: bold; text-transform: uppercase; display: inline-block; margin-top: 2px; }
         .badge-video { background: #e3f2fd; color: #1565c0; }
         .badge-image { background: #e8f5e9; color: #2e7d32; }
 
+        /* Media Queries para Móviles y Tablets */
+        @media (max-width: 900px) {
+            .grid { grid-template-columns: 1fr; } /* Columna única */
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            
+            .header { flex-direction: column; align-items: flex-start; }
+            .header > div { width: 100%; justify-content: space-between; margin-top: 10px; }
+            
+            .card { padding: 15px; }
+            
+            /* Playlist Item Stack en móviles muy pequeños */
+            .playlist-item { align-items: flex-start; }
+            .item-left { width: 100%; }
+            .item-controls { width: 100%; text-align: right; margin-top: -30px; } /* Botón X flotando o abajo */
+            .item-controls button { padding: 8px 12px; }
+        }
     </style>
 </head>
 <body>
@@ -299,16 +396,16 @@
                     : `<span class="type-badge badge-image">IMG (${item.duration/1000}s)</span>`;
 
                 div.innerHTML = `
-                    <div style="display:flex; align-items:center;">
-                        <span style="margin-right:10px; color:#ccc; cursor:move;">☰</span>
+                    <div class="item-left">
+                        <span style="color:#ccc; cursor:move; font-size:1.2em;">☰</span>
                         ${preview}
                         <div class="item-info">
-                            <div style="font-weight:bold; font-size:0.9em;">${item.name || 'Sin nombre'}</div>
+                            <div class="item-name" title="${item.name || ''}">${item.name || 'Sin nombre'}</div>
                             <div>${badge}</div>
                         </div>
                     </div>
                     <div class="item-controls">
-                        <button class="btn-sm btn-danger" onclick="removeItem(${index})">✕</button>
+                        <button class="btn-sm btn-danger" onclick="removeItem(${index})" title="Eliminar">✕</button>
                     </div>
                 `;
                 
