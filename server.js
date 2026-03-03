@@ -105,6 +105,34 @@ app.delete('/api/users/:id', requireAuth, async (req, res) => {
 
 // --- API PANTALLAS ---
 app.get('/api/screens', requireAuth, async (req, res) => {
+    // Limpiar pantallas inactivas NO autorizadas (> 5 min)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const { Op } = require('sequelize');
+    
+    // Debug: Ver qué pantallas hay y su lastSeen
+    /*
+    const allScreens = await Screen.findAll();
+    console.log("--- SCREEN CHECK ---");
+    allScreens.forEach(s => {
+        console.log(`ID: ${s.screenId}, Auth: ${s.authorized}, LastSeen: ${s.lastSeen}, 5minAgo: ${fiveMinutesAgo}`);
+    });
+    */
+
+    try {
+        const deletedCount = await Screen.destroy({
+            where: {
+                authorized: false,
+                [Op.or]: [
+                    { lastSeen: { [Op.lt]: fiveMinutesAgo } },
+                    { lastSeen: null } // También borrar si lastSeen es null
+                ]
+            }
+        });
+        if (deletedCount > 0) console.log(`🗑️ Eliminadas ${deletedCount} pantallas inactivas no autorizadas.`);
+    } catch (err) {
+        console.error("Error limpiando pantallas:", err);
+    }
+
     // Pantallas en BD
     const dbScreens = await Screen.findAll();
     const result = dbScreens.map(s => ({
