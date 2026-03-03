@@ -347,18 +347,38 @@
             container.innerHTML = '';
             screens.forEach(s => {
                 const div = document.createElement('div');
-                div.style.padding = '5px 0';
+                div.style.padding = '10px 0';
                 div.style.borderBottom = '1px solid #eee';
                 div.innerHTML = `
-                    <div style="display:flex; justify-content:space-between;">
-                        <span>${s.name} <small style="color:${s.online?'green':'gray'}">●</small></span>
-                        ${s.authorized 
-                            ? `<button class="btn-sm btn-danger" onclick="toggleAuth('${s.id}', false)">Bloquear</button>` 
-                            : `<button class="btn-sm btn-success" onclick="toggleAuth('${s.id}', true)">Autorizar</button>`}
+                    <div style="display:flex; flex-direction:column; gap:5px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:bold;">${s.name} <small style="color:${s.online?'green':'gray'}">●</small></span>
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn-sm btn-primary" onclick="renameScreen('${s.id}', '${s.name}')" title="Renombrar">✏️</button>
+                                ${s.authorized 
+                                    ? `<button class="btn-sm btn-danger" onclick="toggleAuth('${s.id}', false)">Bloquear</button>` 
+                                    : `<button class="btn-sm btn-success" onclick="toggleAuth('${s.id}', true)">Autorizar</button>`}
+                            </div>
+                        </div>
+                        <small style="color:#888; font-size:0.75rem;">ID: ${s.id}</small>
                     </div>
                 `;
                 container.appendChild(div);
             });
+        }
+
+        async function renameScreen(id, currentName) {
+            const newName = prompt('Nuevo nombre para esta pantalla:', currentName);
+            if (!newName || newName === currentName) return;
+            
+            try {
+                const res = await fetch(`/api/screens/${id}/rename`, {
+                    method: 'POST',
+                    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName })
+                });
+                if (res.ok) loadScreens();
+            } catch(e) { console.error(e); }
         }
 
         async function toggleAuth(id, authorized) {
@@ -570,6 +590,11 @@
             if(!confirm('¿Borrar elemento?')) return;
             currentPlaylistData.splice(index, 1);
             renderPlaylist();
+            
+            // ¡IMPORTANTE! El usuario reporta que al refrescar el video vuelve a aparecer.
+            // Esto es porque removeItem solo lo borraba del array local 'currentPlaylistData'
+            // pero NO lo guardaba en la base de datos.
+            saveOrder(); // Guardar cambios en la BD inmediatamente tras eliminar
         }
 
         // Función para mover items con botones (Móvil)

@@ -129,6 +129,21 @@ app.get('/api/screens', requireAuth, async (req, res) => {
     res.json(result);
 });
 
+app.post('/api/screens/:id/rename', requireAuth, async (req, res) => {
+    const { id } = req.params;
+    const { name } = req.body;
+    try {
+        const screen = await Screen.findOne({ where: { screenId: id } });
+        if (screen) {
+            screen.name = name;
+            await screen.save();
+            res.json({ success: true, message: 'Pantalla renombrada' });
+        } else {
+            res.status(404).json({ message: 'Pantalla no encontrada' });
+        }
+    } catch (e) { res.status(500).json({ message: 'Error DB' }); }
+});
+
 app.post('/api/screens/:id/authorize', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { authorized } = req.body;
