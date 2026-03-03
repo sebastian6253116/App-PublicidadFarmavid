@@ -200,6 +200,24 @@ app.post('/api/screens/:id/authorize', requireAuth, async (req, res) => {
     } catch (e) { res.status(500).json({ message: 'Error DB' }); }
 });
 
+app.delete('/api/screens/:id', requireAuth, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const deleted = await Screen.destroy({ where: { screenId: id } });
+        if (deleted) {
+            // También desconectar si está online para que no reaparezca inmediatamente sin refrescar
+            const socketEntry = Object.entries(connectedSockets).find(([sid, data]) => data.screenId === id);
+            if (socketEntry) {
+                const [socketId] = socketEntry;
+                io.to(socketId).emit('force_reload'); // Opcional: forzar recarga
+            }
+            res.json({ success: true, message: 'Pantalla eliminada' });
+        } else {
+            res.status(404).json({ message: 'Pantalla no encontrada' });
+        }
+    } catch (e) { res.status(500).json({ message: 'Error DB' }); }
+});
+
 // --- API PLAYLIST ---
 
 // Helper para obtener playlist formateada

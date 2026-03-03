@@ -357,7 +357,9 @@
                                 <button class="btn-sm btn-primary" onclick="renameScreen('${s.id}', '${s.name}')" title="Renombrar">✏️</button>
                                 ${s.authorized 
                                     ? `<button class="btn-sm btn-danger" onclick="toggleAuth('${s.id}', false)">Bloquear</button>` 
-                                    : `<button class="btn-sm btn-success" onclick="toggleAuth('${s.id}', true)">Autorizar</button>`}
+                                    : `<button class="btn-sm btn-success" onclick="toggleAuth('${s.id}', true)">Autorizar</button>
+                                       <button class="btn-sm btn-danger" onclick="deleteScreen('${s.id}')" title="Eliminar Definitivamente">🗑️</button>`
+                                }
                             </div>
                         </div>
                         <small style="color:#888; font-size:0.75rem;">ID: ${s.id}</small>
@@ -365,6 +367,15 @@
                 `;
                 container.appendChild(div);
             });
+        }
+
+        async function deleteScreen(id) {
+            if(!confirm('¿Estás seguro de ELIMINAR esta pantalla? Se borrará de la lista.')) return;
+            try {
+                const res = await fetch(`/api/screens/${id}`, { method: 'DELETE', headers: apiHeaders });
+                if(res.ok) loadScreens();
+                else alert('Error al eliminar');
+            } catch(e) { console.error(e); }
         }
 
         async function renameScreen(id, currentName) {
