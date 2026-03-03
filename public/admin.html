@@ -238,6 +238,16 @@
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <h3 id="loadingText">Subiendo contenido...</h3>
+        <div id="progressBarContainer" style="width: 80%; max-width: 300px; background: #ddd; height: 10px; border-radius: 5px; margin-top: 10px; overflow: hidden; display: none;">
+            <div id="progressBar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s;"></div>
+        </div>
+        <div id="progressText" style="margin-top: 5px; font-weight: bold; color: #555;"></div>
+    </div>
+
     <div class="header">
         <h1>📺 Panel de Control</h1>
         <div>
@@ -649,13 +659,59 @@
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
-            try {
-                const res = await fetch('/api/publish', { method: 'POST', headers: { 'Authorization': token }, body: formData });
-                const data = await res.json();
-                alert(data.message);
-                e.target.reset();
-                loadPlaylist(); // Recargar para ver los nuevos items
-            } catch (err) { alert('Error al subir'); }
+            const overlay = document.getElementById('loadingOverlay');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const progressBarContainer = document.getElementById('progressBarContainer');
+            
+            // Validar que hay archivos
+            const fileInput = e.target.querySelector('input[name="media"]');
+            if (fileInput && fileInput.files.length === 0) {
+                alert('Por favor selecciona al menos un archivo.');
+                return;
+            }
+
+            if (overlay) {
+                overlay.style.display = 'flex';
+                progressBarContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                progressText.innerText = '0%';
+            }
+
+            // Usar XMLHttpRequest para tener progreso de subida (fetch no soporta upload progress nativamente fácil)
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/publish');
+            // Headers
+            xhr.setRequestHeader('Authorization', localStorage.getItem('admin_token'));
+            
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                    progressText.innerText = percentComplete + '%';
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    const data = JSON.parse(xhr.responseText);
+                    alert(data.message || 'Contenido publicado exitosamente');
+                    e.target.reset();
+                    loadPlaylist();
+                } else {
+                    let msg = 'Error desconocido';
+                    try { msg = JSON.parse(xhr.responseText).message; } catch(e){}
+                    alert('Error: ' + msg);
+                }
+                overlay.style.display = 'none';
+            };
+
+            xhr.onerror = () => {
+                alert('Error de conexión o subida fallida.');
+                overlay.style.display = 'none';
+            };
+
+            xhr.send(formData);
         });
 
         // Init
