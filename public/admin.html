@@ -133,65 +133,84 @@
             /* Playlist Items en Móvil */
             .playlist-item {
                 display: grid;
-                grid-template-columns: 40px 1fr 40px; /* Drag handle | Content | Delete */
+                grid-template-columns: 1fr auto; /* Content | Controls */
+                grid-template-rows: auto auto; /* Content row | Order Controls row */
                 gap: 10px;
                 align-items: center;
-                padding: 12px;
+                padding: 15px;
+                border-bottom: 4px solid #f0f2f5; /* Separación visual clara */
             }
             
             .item-left {
+                grid-column: 1 / -1; /* Ocupa todo el ancho arriba */
                 display: flex;
-                flex-direction: column;
-                align-items: flex-start;
-                width: 100%;
-                min-width: 0; /* Fix overflow flex item */
+                flex-direction: row; /* Imagen a la izq, texto a la der */
+                align-items: center;
+                gap: 15px;
             }
             
             .item-preview {
-                width: 100%;
-                height: 120px; /* Imagen más grande en móvil */
-                margin-bottom: 8px;
-                object-fit: cover;
-                border-radius: 6px;
+                width: 80px;
+                height: 60px; 
+                margin-bottom: 0;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
 
             .item-info {
-                width: 100%;
+                flex: 1;
             }
             
             .item-name {
                 font-size: 1rem;
-                white-space: normal; /* Permitir multilínea */
-                margin-bottom: 4px;
+                color: #333;
+                font-weight: 700;
             }
-
-            /* Drag Handle */
-            .playlist-item > span:first-child {
-                font-size: 1.5rem;
-                padding: 10px;
+            
+            /* Botones de control móvil */
+            .mobile-controls {
+                grid-column: 1 / -1; /* Fila inferior completa */
                 display: flex;
+                justify-content: space-between;
                 align-items: center;
-                justify-content: center;
+                background: #f8f9fa;
+                padding: 8px;
+                border-radius: 8px;
+                margin-top: 5px;
             }
-
-            /* Delete Button */
-            .item-controls {
-                width: auto;
-                text-align: center;
-                margin: 0;
+            
+            .order-buttons {
+                display: flex;
+                gap: 10px;
             }
-            .item-controls button {
-                padding: 10px;
+            
+            .btn-move {
+                background: white;
+                border: 1px solid #ddd;
+                padding: 8px 15px;
+                border-radius: 6px;
                 font-size: 1.2rem;
-                width: 40px;
-                height: 40px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                color: #555;
+            }
+
+            /* Ocultar drag handle original en móvil */
+            .drag-handle-pc { display: none !important; }
+            
+            /* Delete Button Movil */
+            .item-controls { display: none; } /* Ocultamos el control de PC */
+            
+            .btn-delete-mobile {
+                background: #fee;
+                color: #dc3545;
+                border: 1px solid #fcc;
+                padding: 8px 15px;
+                border-radius: 6px;
+                font-weight: bold;
             }
         }
 
         @media (min-width: 901px) {
+            .mobile-controls { display: none; }
             .item-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; }
             .item-preview { width: 60px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
         }
@@ -457,15 +476,26 @@
                 
                 div.innerHTML = `
                     <div class="item-left">
-                        <span style="color:#ccc; cursor:move; font-size:1.2em; margin-right: 10px;">☰</span>
+                        <span class="drag-handle-pc" style="color:#ccc; cursor:move; font-size:1.2em; margin-right: 10px;">☰</span>
                         ${preview}
                         <div class="item-info">
                             <div class="item-name" title="${item.name || ''}">${item.name || 'Sin nombre'}</div>
                             <div>${badge}</div>
                         </div>
                     </div>
+                    
+                    <!-- Controles PC -->
                     <div class="item-controls">
                         <button class="btn-sm btn-danger" onclick="removeItem(${index})" title="Eliminar">✕</button>
+                    </div>
+
+                    <!-- Controles Móvil (Botones subir/bajar explícitos) -->
+                    <div class="mobile-controls">
+                        <div class="order-buttons">
+                            <button class="btn-move" onclick="moveItem(${index}, -1)" ${index === 0 ? 'disabled style="opacity:0.3"' : ''}>⬆</button>
+                            <button class="btn-move" onclick="moveItem(${index}, 1)" ${index === currentPlaylistData.length - 1 ? 'disabled style="opacity:0.3"' : ''}>⬇</button>
+                        </div>
+                        <button class="btn-delete-mobile" onclick="removeItem(${index})">Eliminar</button>
                     </div>
                 `;
                 
@@ -518,6 +548,19 @@
         function removeItem(index) {
             if(!confirm('¿Borrar elemento?')) return;
             currentPlaylistData.splice(index, 1);
+            renderPlaylist();
+        }
+
+        // Función para mover items con botones (Móvil)
+        function moveItem(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= currentPlaylistData.length) return;
+            
+            // Swap
+            const temp = currentPlaylistData[index];
+            currentPlaylistData[index] = currentPlaylistData[newIndex];
+            currentPlaylistData[newIndex] = temp;
+            
             renderPlaylist();
         }
 
