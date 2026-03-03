@@ -95,9 +95,6 @@
         #playlistContainer { min-height: 100px; border: 2px dashed #ddd; padding: 10px; border-radius: 6px; background: #fafafa; }
         
         .playlist-item { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
             background: white; 
             border: 1px solid #eee; 
             padding: 10px; 
@@ -105,14 +102,10 @@
             border-radius: 6px; 
             cursor: grab; 
             transition: transform 0.2s, box-shadow 0.2s;
-            flex-wrap: wrap;
-            gap: 10px;
         }
         .playlist-item:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .playlist-item.dragging { opacity: 0.5; border: 2px dashed var(--primary); }
         
-        .item-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; }
-        .item-preview { width: 60px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
         .item-info { flex: 1; overflow: hidden; }
         .item-name { font-weight: bold; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
@@ -123,21 +116,84 @@
         /* Media Queries para Móviles y Tablets */
         @media (max-width: 900px) {
             .grid { grid-template-columns: 1fr; } /* Columna única */
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .header > div {
+                width: 100%;
+                justify-content: space-between;
+                margin-top: 5px;
+            }
+            
+            .card { padding: 15px; margin-bottom: 15px; }
+            
+            /* Playlist Items en Móvil */
+            .playlist-item {
+                display: grid;
+                grid-template-columns: 40px 1fr 40px; /* Drag handle | Content | Delete */
+                gap: 10px;
+                align-items: center;
+                padding: 12px;
+            }
+            
+            .item-left {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                width: 100%;
+                min-width: 0; /* Fix overflow flex item */
+            }
+            
+            .item-preview {
+                width: 100%;
+                height: 120px; /* Imagen más grande en móvil */
+                margin-bottom: 8px;
+                object-fit: cover;
+                border-radius: 6px;
+            }
+
+            .item-info {
+                width: 100%;
+            }
+            
+            .item-name {
+                font-size: 1rem;
+                white-space: normal; /* Permitir multilínea */
+                margin-bottom: 4px;
+            }
+
+            /* Drag Handle */
+            .playlist-item > span:first-child {
+                font-size: 1.5rem;
+                padding: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            /* Delete Button */
+            .item-controls {
+                width: auto;
+                text-align: center;
+                margin: 0;
+            }
+            .item-controls button {
+                padding: 10px;
+                font-size: 1.2rem;
+                width: 40px;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
         }
 
-        @media (max-width: 600px) {
-            body { padding: 10px; }
-            
-            .header { flex-direction: column; align-items: flex-start; }
-            .header > div { width: 100%; justify-content: space-between; margin-top: 10px; }
-            
-            .card { padding: 15px; }
-            
-            /* Playlist Item Stack en móviles muy pequeños */
-            .playlist-item { align-items: flex-start; }
-            .item-left { width: 100%; }
-            .item-controls { width: 100%; text-align: right; margin-top: -30px; } /* Botón X flotando o abajo */
-            .item-controls button { padding: 8px 12px; }
+        @media (min-width: 901px) {
+            .item-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; }
+            .item-preview { width: 60px; height: 40px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
         }
     </style>
 </head>
@@ -395,9 +451,13 @@
                     ? `<span class="type-badge badge-video">VIDEO</span>` 
                     : `<span class="type-badge badge-image">IMG (${item.duration/1000}s)</span>`;
 
+                // Detectar si es móvil (ancho menor a 900px) para cambiar layout HTML si es necesario, 
+                // pero mejor usamos CSS Grid puro.
+                // En este caso, simplificamos el HTML y dejamos que CSS haga el trabajo sucio.
+                
                 div.innerHTML = `
                     <div class="item-left">
-                        <span style="color:#ccc; cursor:move; font-size:1.2em;">☰</span>
+                        <span style="color:#ccc; cursor:move; font-size:1.2em; margin-right: 10px;">☰</span>
                         ${preview}
                         <div class="item-info">
                             <div class="item-name" title="${item.name || ''}">${item.name || 'Sin nombre'}</div>
