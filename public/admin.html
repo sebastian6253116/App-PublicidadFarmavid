@@ -209,9 +209,79 @@
             }
         }
 
+        /* Loading Overlay (Fondo oscuro) */
+        #loadingOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); /* Fondo más oscuro para resaltar el popup */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(2px); /* Efecto borroso de fondo */
+        }
+
+        /* Popup Card */
+        .loading-popup {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 90%;
+            max-width: 350px; /* Ancho máximo para PC */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: popupIn 0.3s ease-out;
+        }
+
+        @keyframes popupIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #progressBarContainer {
+            width: 100%;
+            background: #eee;
+            height: 8px;
+            border-radius: 4px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        #progressBar {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        #progressText {
+            margin-top: 8px;
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 600;
+        }
+
+        #loadingText {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #333;
+        }
+
         @media (min-width: 901px) {
             .mobile-controls { display: none; }
-            .item-left { display: flex; align-items: center; gap: 15px; flex: 1; min-width: 200px; }
+            .item-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; }
             .item-preview { width: 80px; height: 50px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
             
             /* Botón de eliminar mejorado en PC */
