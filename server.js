@@ -42,7 +42,11 @@ const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadDir),
     filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
 });
-const upload = multer({ storage });
+
+const upload = multer({ 
+    storage,
+    limits: { fileSize: 150 * 1024 * 1024 } // 150MB Límite
+});
 
 let connectedSockets = {}; 
 
@@ -236,46 +240,59 @@ app.post('/api/playlist/update', requireAuth, async (req, res) => {
 });
 
 // Subir Múltiples Archivos
-app.post('/api/publish', requireAuth, upload.array('media'), async (req, res) => {
-    const { duration, targetScreen, transition } = req.body;
-    
-    if (!req.files || req.files.length === 0) return res.status(400).json({ message: 'Falta contenido' });
-
-    try {
-        // Obtener el último orden
-        const lastItem = await PlaylistItem.findOne({
-            where: { targetScreen },
-            order: [['order', 'DESC']]
-        });
-        let nextOrder = lastItem ? lastItem.order + 1 : 0;
-
-        for (const file of req.files) {
-            const isVideo = file.mimetype.startsWith('video/');
-            
-            // 1. Crear MediaItem
-            const media = await MediaItem.create({
-                type: isVideo ? 'video' : 'image',
-                url: `/uploads/${file.filename}`,
-                filename: file.filename,
-                originalName: file.originalname,
-                duration: parseInt(duration) * 1000,
-                transition: transition || 'fade'
-            });
-
-            // 2. Asociar a Playlist
-            await PlaylistItem.create({
-                order: nextOrder++,
-                targetScreen: targetScreen,
-                MediaItemId: media.id
-            });
+app.post('/api/publish', requireAuth, (req, res) => {
+    upload.array('media')(req, res, async (err) => {
+        if (err instanceof multer.MulterError) {
+            // Error de Multer (ej. archivo muy grande)
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ message: 'Error: El archivo supera el límite de 150MB.' });
+            }
+            return res.status(500).json({ message: `Error de subida: ${err.message}` });
+        } else if (err) {
+            return res.status(500).json({ message: `Error desconocido: ${err.message}` });
         }
 
-        await notifyUpdate(targetScreen);
-        res.json({ success: true, message: `${req.files.length} elementos agregados` });
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ message: 'Error guardando en BD' });
-    }
+        // Si todo va bien, procesamos los archivos
+        const { duration, targetScreen, transition } = req.body;
+        
+        if (!req.files || req.files.length === 0) return res.status(400).json({ message: 'Falta contenido' });
+
+        try {
+            // Obtener el último orden
+            const lastItem = await PlaylistItem.findOne({
+                where: { targetScreen },
+                order: [['order', 'DESC']]
+            });
+            let nextOrder = lastItem ? lastItem.order + 1 : 0;
+
+            for (const file of req.files) {
+                const isVideo = file.mimetype.startsWith('video/');
+                
+                // 1. Crear MediaItem
+                const media = await MediaItem.create({
+                    type: isVideo ? 'video' : 'image',
+                    url: `/uploads/${file.filename}`,
+                    filename: file.filename,
+                    originalName: file.originalname,
+                    duration: parseInt(duration) * 1000,
+                    transition: transition || 'fade'
+                });
+
+                // 2. Asociar a Playlist
+                await PlaylistItem.create({
+                    order: nextOrder++,
+                    targetScreen: targetScreen,
+                    MediaItemId: media.id
+                });
+            }
+
+            await notifyUpdate(targetScreen);
+            res.json({ success: true, message: `${req.files.length} elementos agregados` });
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ message: 'Error guardando en BD' });
+        }
+    });
 });
 
 app.post('/api/clear', requireAuth, async (req, res) => {
