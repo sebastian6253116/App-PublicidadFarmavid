@@ -105,7 +105,20 @@ Sistema de gestión de publicidad para pantallas (Digital Signage) basado en tec
 *   **Limpieza:** El sistema elimina automáticamente de la base de datos las pantallas no autorizadas que lleven más de 5 minutos desconectadas.
 *   **Persistencia:** Si eliminas un video de la playlist, el cambio se guarda permanentemente en la base de datos.
 
-## 🐳 Despliegue con Docker (Dokploy)
+## Generación de APK para Android TV (Kiosk Mode)
+
+Se ha integrado **Capacitor** para permitir generar una aplicación nativa `.apk` que envuelve el reproductor web. Esto es ideal para Android TV y TV Box.
+
+### Características del APK:
+*   **Modo Kiosk:** Pantalla completa sin barras de navegación.
+*   **Keep Awake:** Evita que el TV entre en reposo.
+*   **Carga Remota:** Siempre carga la última versión de `https://tv.farmavid.com.ve/tv.html`.
+*   **Auto-reconexión:** Maneja la pérdida de conexión automáticamente (gracias a la web app).
+
+### Cómo generar el APK:
+Consulta la guía detallada en [BUILD_APK.md](./BUILD_APK.md) para instrucciones paso a paso.
+
+## 🚀 Despliegue con Dokploy
 
 El proyecto incluye un `Dockerfile` optimizado.
 1.  Asegúrate de configurar las variables de entorno para la conexión MySQL en tu plataforma de despliegue.

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FarmaVid Player</string>
+    <string name="title_activity_main">FarmaVid Player</string>
+    <string name="package_name">com.farmavid.tvplayer</string>
+    <string name="custom_url_scheme">com.farmavid.tvplayer</string>
+</resources>

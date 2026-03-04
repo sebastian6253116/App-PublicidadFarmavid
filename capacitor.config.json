@@ -1,0 +1,14 @@
+{
+  "appId": "com.farmavid.tvplayer",
+  "appName": "FarmaVid Player",
+  "webDir": "public",
+  "server": {
+    "url": "https://tv.farmavid.com.ve/tv.html",
+    "cleartext": true
+  },
+  "plugins": {
+    "KeepAwake": {
+      "allowDisplaySleep": false
+    }
+  }
+}

@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "node server.js",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -10,6 +13,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.0",
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "multer": "^2.1.0",
