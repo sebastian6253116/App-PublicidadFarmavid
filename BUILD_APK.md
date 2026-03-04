@@ -44,6 +44,7 @@ Una vez tengas Android Studio instalado:
 La aplicación está configurada para cargar remotamente:
 *   **URL:** `https://tv.farmavid.com.ve/tv.html`
 *   **Pantalla:** Se mantendrá siempre encendida (Keep Awake activo).
+*   **Auto-Inicio:** La aplicación se iniciará automáticamente cuando el TV se encienda (Boot Completed).
 *   **Compatibilidad:** Optimizada para Android TV (Leanback) y pantallas sin táctil.
 
 ## Solución de Problemas
