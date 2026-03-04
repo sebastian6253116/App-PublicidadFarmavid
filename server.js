@@ -204,18 +204,31 @@ app.delete('/api/screens/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     try {
         const deleted = await Screen.destroy({ where: { screenId: id } });
-        if (deleted) {
-            // También desconectar si está online para que no reaparezca inmediatamente sin refrescar
-            const socketEntry = Object.entries(connectedSockets).find(([sid, data]) => data.screenId === id);
+        
+        // Buscar si está conectado (aunque no esté en BD o ya se haya borrado)
+        const socketEntry = Object.entries(connectedSockets).find(([sid, data]) => data.screenId === id);
+        
+        if (deleted || socketEntry) {
             if (socketEntry) {
                 const [socketId] = socketEntry;
-                io.to(socketId).emit('force_reload'); // Opcional: forzar recarga
+                io.to(socketId).emit('force_reload'); // Forzar recarga en el cliente
+                
+                // Forzamos desconexión del socket para limpiar estado
+                const socketObj = io.sockets.sockets.get(socketId);
+                if (socketObj) socketObj.disconnect(true);
             }
             res.json({ success: true, message: 'Pantalla eliminada' });
         } else {
-            res.status(404).json({ message: 'Pantalla no encontrada' });
+            // Si no estaba en BD y tampoco conectado, entonces sí es un 404 real
+            // PERO: Puede que el frontend tenga la pantalla en lista pero el socket ya se desconectó y no estaba en BD.
+            // En ese caso, para el usuario es "eliminar de la lista visual".
+            // Así que devolvemos 200 OK para que el frontend refresque y desaparezca.
+            res.json({ success: true, message: 'Pantalla no encontrada (probablemente ya desconectada)' });
         }
-    } catch (e) { res.status(500).json({ message: 'Error DB' }); }
+    } catch (e) { 
+        console.error(e);
+        res.status(500).json({ message: 'Error DB' }); 
+    }
 });
 
 // --- API PLAYLIST ---
