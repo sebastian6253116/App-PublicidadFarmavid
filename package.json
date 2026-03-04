@@ -15,6 +15,7 @@
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.0",
     "@capacitor/android": "^8.1.0",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.1.0",
     "@capacitor/core": "^8.1.0",
     "cors": "^2.8.6",
