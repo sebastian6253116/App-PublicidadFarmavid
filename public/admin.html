@@ -369,7 +369,16 @@
             </div>
 
             <div class="card">
-                <h2>🚀 Subir Contenido</h2>
+                <h2>� Plantillas Guardadas</h2>
+                <div style="display:flex; gap:5px; margin-bottom:10px;">
+                    <input type="text" id="newTemplateName" placeholder="Nombre nueva plantilla..." style="flex:1;">
+                    <button class="btn btn-primary btn-sm" onclick="saveCurrentAsTemplate()">Guardar Actual</button>
+                </div>
+                <div id="templateListContainer" style="max-height: 200px; overflow-y: auto;">Cargando...</div>
+            </div>
+
+            <div class="card">
+                <h2>� Subir Contenido</h2>
                 <form id="uploadForm">
                     <label>1. Destino:</label>
                     <select name="targetScreen" id="targetScreenSelect" onchange="loadPlaylist()">
@@ -428,6 +437,33 @@
                 <div style="margin-top: 15px; text-align: right;">
                     <button class="btn btn-sm btn-danger" onclick="clearPlaylist()">🗑️ Vaciar Todo</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Item Modal -->
+    <div id="editItemModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+        <div style="background:white; padding:20px; border-radius:10px; width:300px; text-align:center;">
+            <h3>Editar Elemento</h3>
+            <input type="hidden" id="editItemId">
+            
+            <label>Duración (ms):</label>
+            <input type="number" id="editDuration" placeholder="Default">
+            <small style="color:#666">Solo para imágenes</small>
+
+            <label>Transición:</label>
+            <select id="editTransition">
+                <option value="">(Default)</option>
+                <option value="fade">Fade</option>
+                <option value="slide-left">Slide Left</option>
+                <option value="slide-right">Slide Right</option>
+                <option value="zoom-in">Zoom In</option>
+                <option value="none">Ninguna</option>
+            </select>
+
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="saveItemEdit()">Guardar</button>
             </div>
         </div>
     </div>
@@ -530,6 +566,133 @@
             });
             if (current) select.value = current;
             loadPlaylist(); // Cargar playlist del seleccionado
+        }
+
+        // --- GESTIÓN DE PLANTILLAS ---
+        async function loadTemplates() {
+            try {
+                const res = await fetch('/api/templates', { headers: apiHeaders });
+                const templates = await res.json();
+                const container = document.getElementById('templateListContainer');
+                container.innerHTML = '';
+                
+                if(templates.length === 0) {
+                    container.innerHTML = '<small style="color:#999; padding:10px; display:block;">No hay plantillas guardadas</small>';
+                    return;
+                }
+
+                templates.forEach(t => {
+                    const div = document.createElement('div');
+                    div.style.padding = '8px';
+                    div.style.borderBottom = '1px solid #eee';
+                    div.style.display = 'flex';
+                    div.style.justifyContent = 'space-between';
+                    div.style.alignItems = 'center';
+                    div.innerHTML = `
+                        <span>📄 ${t.name}</span>
+                        <div style="display:flex; gap:5px;">
+                            <button class="btn-sm btn-success" onclick="loadTemplate(${t.id})" title="Cargar en Pantalla Actual">Cargar</button>
+                            <button class="btn-sm btn-danger" onclick="deleteTemplate(${t.id})" title="Eliminar Plantilla">🗑️</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        async function saveCurrentAsTemplate() {
+            const name = document.getElementById('newTemplateName').value;
+            const sourceScreen = document.getElementById('targetScreenSelect').value;
+            
+            if(!name) return alert('Escribe un nombre para la plantilla');
+            if(sourceScreen === 'ALL') {
+                // Permitir guardar Global como plantilla
+            }
+            
+            try {
+                const res = await fetch('/api/templates/save-from-screen', {
+                    method: 'POST',
+                    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, sourceScreen })
+                });
+                const data = await res.json();
+                if(res.ok) {
+                    alert('Plantilla guardada');
+                    document.getElementById('newTemplateName').value = '';
+                    loadTemplates();
+                } else {
+                    alert(data.message);
+                }
+            } catch(e) { alert('Error al guardar'); }
+        }
+
+        async function loadTemplate(id) {
+            const targetScreen = document.getElementById('targetScreenSelect').value;
+            if(!confirm(`¿Cargar plantilla en ${targetScreen === 'ALL' ? 'GLOBAL' : 'Pantalla Actual'}? Se reemplazará la lista actual.`)) return;
+
+            try {
+                const res = await fetch(`/api/templates/${id}/load`, {
+                    method: 'POST',
+                    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetScreen })
+                });
+                if(res.ok) {
+                    loadPlaylist();
+                    alert('Plantilla cargada exitosamente');
+                } else {
+                    alert('Error al cargar plantilla');
+                }
+            } catch(e) { alert('Error'); }
+        }
+
+        async function deleteTemplate(id) {
+            if(!confirm('¿Eliminar esta plantilla?')) return;
+            await fetch(`/api/templates/${id}`, { method: 'DELETE', headers: apiHeaders });
+            loadTemplates();
+        }
+
+        // --- EDICIÓN DE ITEMS ---
+        let currentEditIndex = -1;
+
+        function openEditModal(index) {
+            currentEditIndex = index;
+            const item = currentPlaylistData[index];
+            
+            document.getElementById('editItemId').value = item.id; // ID de PlaylistItem
+            document.getElementById('editDuration').value = item.duration || ''; // Si es null, usa default
+            document.getElementById('editTransition').value = item.transition || '';
+            
+            // Mostrar modal
+            const modal = document.getElementById('editItemModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editItemModal').style.display = 'none';
+        }
+
+        async function saveItemEdit() {
+            const id = document.getElementById('editItemId').value;
+            const duration = document.getElementById('editDuration').value;
+            const transition = document.getElementById('editTransition').value;
+            
+            try {
+                const res = await fetch(`/api/playlist-item/${id}`, {
+                    method: 'PUT',
+                    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        duration: duration ? parseInt(duration) : null, 
+                        transition: transition || null 
+                    })
+                });
+                
+                if(res.ok) {
+                    closeEditModal();
+                    loadPlaylist(); // Recargar para ver cambios
+                } else {
+                    alert('Error al actualizar');
+                }
+            } catch(e) { alert('Error'); }
         }
 
         // --- GESTIÓN DE USUARIOS ---
@@ -654,7 +817,8 @@
                     </div>
                     
                     <!-- Controles PC -->
-                    <div class="item-controls">
+                    <div class="item-controls" style="display:flex; gap:5px;">
+                        <button class="btn-sm btn-primary" onclick="openEditModal(${index})" title="Editar" style="background:#e3f2fd; color:#007bff; border-color:#b3d7ff;">✎</button>
                         <button class="btn-sm btn-danger" onclick="removeItem(${index})" title="Eliminar">✕</button>
                     </div>
 
@@ -664,7 +828,10 @@
                             <button class="btn-move" onclick="moveItem(${index}, -1)" ${index === 0 ? 'disabled style="opacity:0.3"' : ''}>⬆</button>
                             <button class="btn-move" onclick="moveItem(${index}, 1)" ${index === currentPlaylistData.length - 1 ? 'disabled style="opacity:0.3"' : ''}>⬇</button>
                         </div>
-                        <button class="btn-delete-mobile" onclick="removeItem(${index})">Eliminar</button>
+                        <div style="display:flex; gap:5px;">
+                            <button class="btn-sm btn-primary" onclick="openEditModal(${index})" style="background:#e3f2fd; color:#007bff; border-color:#b3d7ff; padding:8px 15px; border-radius:6px;">✎</button>
+                            <button class="btn-delete-mobile" onclick="removeItem(${index})">Eliminar</button>
+                        </div>
                     </div>
                 `;
                 
@@ -824,6 +991,7 @@
         // Init
         loadScreens();
         loadUsers(); // Cargar usuarios al inicio
+        loadTemplates(); // Cargar plantillas
         setInterval(loadScreens, 10000); // Refrescar estado pantallas
     </script>
 </body>

@@ -39,16 +39,35 @@ const MediaItem = sequelize.define('MediaItem', {
     transition: { type: DataTypes.STRING, defaultValue: 'fade' }
 });
 
-// Relación: Pantalla -> Playlist (Items)
+// Playlist Guardada (Plantilla)
+const Playlist = sequelize.define('Playlist', {
+    name: { type: DataTypes.STRING, allowNull: false, unique: true },
+    description: { type: DataTypes.STRING }
+});
+
+// Elementos de Playlist Guardada
+const SavedPlaylistItem = sequelize.define('SavedPlaylistItem', {
+    order: { type: DataTypes.INTEGER, defaultValue: 0 },
+    duration: { type: DataTypes.INTEGER }, // Override de duración
+    transition: { type: DataTypes.STRING } // Override de transición
+});
+
+// Relación: Pantalla -> Playlist (Items Activos)
 // Usamos una tabla intermedia para manejar el orden y pertenencia
 const PlaylistItem = sequelize.define('PlaylistItem', {
     order: { type: DataTypes.INTEGER, defaultValue: 0 },
-    targetScreen: { type: DataTypes.STRING, allowNull: false } // 'ALL' o screenId
+    targetScreen: { type: DataTypes.STRING, allowNull: false }, // 'ALL' o screenId
+    duration: { type: DataTypes.INTEGER }, // Override de duración específico
+    transition: { type: DataTypes.STRING } // Override de transición específico
 });
 
 // Relaciones
 MediaItem.hasMany(PlaylistItem, { onDelete: 'CASCADE' });
 PlaylistItem.belongsTo(MediaItem);
+
+Playlist.hasMany(SavedPlaylistItem, { onDelete: 'CASCADE' });
+SavedPlaylistItem.belongsTo(Playlist);
+SavedPlaylistItem.belongsTo(MediaItem);
 
 // Función de inicialización
 const initDB = async () => {
@@ -84,6 +103,8 @@ module.exports = {
     User,
     Screen,
     MediaItem,
+    Playlist,
+    SavedPlaylistItem,
     PlaylistItem,
     initDB
 };

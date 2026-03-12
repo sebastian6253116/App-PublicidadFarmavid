@@ -163,11 +163,34 @@
             }
         });
 
-        socket.on('update_playlist', (playlist) => {
+        socket.on('update_playlist', (data) => {
             if (!isAuthorized) return;
-            currentPlaylist = playlist;
-            currentIndex = 0;
-            startPlayback();
+            
+            // Soporte para nuevo formato { playlist, restart } o antiguo (array directo)
+            let newPlaylist = [];
+            let shouldRestart = true;
+
+            if (Array.isArray(data)) {
+                newPlaylist = data;
+            } else if (data && data.playlist) {
+                newPlaylist = data.playlist;
+                if (data.restart !== undefined) shouldRestart = data.restart;
+            }
+
+            currentPlaylist = newPlaylist;
+            
+            if (shouldRestart) {
+                currentIndex = 0;
+                startPlayback();
+            } else {
+                // Si no se fuerza reinicio, solo actualizamos la lista
+                // Si el índice actual excede la nueva longitud, ajustar
+                if (currentIndex >= currentPlaylist.length) {
+                    currentIndex = 0;
+                    startPlayback();
+                }
+                // Si estamos reproduciendo, la próxima diapositiva usará la nueva lista
+            }
         });
 
         function resetSlots() {

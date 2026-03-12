@@ -5,7 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
-const { initDB, User, Screen, MediaItem, PlaylistItem, sequelize } = require('./database');
+const { initDB, User, Screen, MediaItem, PlaylistItem, Playlist, SavedPlaylistItem, sequelize } = require('./database');
 
 const app = express();
 const server = http.createServer(app);
@@ -193,7 +193,7 @@ app.post('/api/screens/:id/authorize', requireAuth, async (req, res) => {
             io.to(socketEntry[0]).emit('authorization_change', { authorized });
             if (authorized) {
                 const playlist = await getEffectivePlaylist(id);
-                io.to(socketEntry[0]).emit('update_playlist', playlist);
+                io.to(socketEntry[0]).emit('update_playlist', { playlist, restart: true });
             }
         }
         res.json({ success: true, message: `Pantalla ${authorized ? 'autorizada' : 'desactivada'}` });
@@ -262,8 +262,9 @@ async function getEffectivePlaylist(screenId) {
         mediaId: item.MediaItem.id,
         type: item.MediaItem.type,
         url: item.MediaItem.url,
-        duration: item.MediaItem.duration,
-        transition: item.MediaItem.transition,
+        // Usar override si existe, sino el default del media
+        duration: item.duration || item.MediaItem.duration,
+        transition: item.transition || item.MediaItem.transition,
         name: item.MediaItem.originalName
     }));
 }
@@ -281,11 +282,115 @@ app.get('/api/playlist/:target', requireAuth, async (req, res) => {
         mediaId: item.MediaItem.id,
         type: item.MediaItem.type,
         url: item.MediaItem.url,
-        duration: item.MediaItem.duration,
-        transition: item.MediaItem.transition,
+        duration: item.duration || item.MediaItem.duration,
+        transition: item.transition || item.MediaItem.transition,
         name: item.MediaItem.originalName
     }));
     res.json(formatted);
+});
+
+// --- GESTIÓN DE PLANTILLAS (PLAYLISTS GUARDADAS) ---
+
+// 1. Guardar la cola actual de una pantalla como una Nueva Playlist (Template)
+app.post('/api/templates/save-from-screen', requireAuth, async (req, res) => {
+    const { name, sourceScreen } = req.body;
+    try {
+        // Verificar nombre único
+        const exists = await Playlist.findOne({ where: { name } });
+        if (exists) return res.status(400).json({ message: 'Ya existe una playlist con ese nombre' });
+
+        // Obtener items actuales
+        const currentItems = await PlaylistItem.findAll({
+            where: { targetScreen: sourceScreen },
+            order: [['order', 'ASC']]
+        });
+
+        if (currentItems.length === 0) return res.status(400).json({ message: 'La pantalla está vacía' });
+
+        // Crear Playlist
+        const playlist = await Playlist.create({ name });
+
+        // Copiar items
+        for (const item of currentItems) {
+            await SavedPlaylistItem.create({
+                PlaylistId: playlist.id,
+                MediaItemId: item.MediaItemId,
+                order: item.order,
+                duration: item.duration,
+                transition: item.transition
+            });
+        }
+
+        res.json({ success: true, message: 'Playlist guardada exitosamente' });
+    } catch (e) { console.error(e); res.status(500).json({ message: 'Error al guardar' }); }
+});
+
+// 2. Listar todas las Playlists guardadas
+app.get('/api/templates', requireAuth, async (req, res) => {
+    try {
+        const playlists = await Playlist.findAll();
+        res.json(playlists);
+    } catch (e) { res.status(500).json({ message: 'Error' }); }
+});
+
+// 3. Cargar una Playlist guardada en una pantalla (Reemplazar)
+app.post('/api/templates/:id/load', requireAuth, async (req, res) => {
+    const { targetScreen } = req.body;
+    const templateId = req.params.id;
+
+    try {
+        // Obtener items de la plantilla
+        const templateItems = await SavedPlaylistItem.findAll({
+            where: { PlaylistId: templateId },
+            order: [['order', 'ASC']]
+        });
+
+        if (templateItems.length === 0) return res.status(400).json({ message: 'La playlist está vacía' });
+
+        // Borrar cola actual
+        await PlaylistItem.destroy({ where: { targetScreen } });
+
+        // Insertar nuevos
+        for (const item of templateItems) {
+            await PlaylistItem.create({
+                targetScreen,
+                MediaItemId: item.MediaItemId,
+                order: item.order,
+                duration: item.duration,
+                transition: item.transition
+            });
+        }
+
+        await notifyUpdate(targetScreen, true); // true = restart
+        res.json({ success: true, message: 'Playlist cargada en pantalla' });
+    } catch (e) { console.error(e); res.status(500).json({ message: 'Error al cargar' }); }
+});
+
+// 4. Eliminar una Playlist guardada
+app.delete('/api/templates/:id', requireAuth, async (req, res) => {
+    try {
+        await Playlist.destroy({ where: { id: req.params.id } });
+        res.json({ success: true, message: 'Playlist eliminada' });
+    } catch (e) { res.status(500).json({ message: 'Error' }); }
+});
+
+// --- EDICIÓN DE ITEMS EN COLA ACTIVA ---
+
+// Editar duración/transición de un item específico en la cola
+app.put('/api/playlist-item/:id', requireAuth, async (req, res) => {
+    const { duration, transition } = req.body;
+    try {
+        const item = await PlaylistItem.findByPk(req.params.id);
+        if (!item) return res.status(404).json({ message: 'Item no encontrado' });
+
+        if (duration) item.duration = duration;
+        if (transition) item.transition = transition;
+        
+        await item.save();
+
+        await notifyUpdate(item.targetScreen, true); // Reiniciar para aplicar cambios
+        res.json({ success: true, message: 'Item actualizado' });
+    } catch (e) { res.status(500).json({ message: 'Error' }); }
 });
 
 // Actualizar Orden (Recibe array de objetos con ID)
@@ -306,7 +411,7 @@ app.post('/api/playlist/update', requireAuth, async (req, res) => {
             });
         }
 
-        await notifyUpdate(targetScreen);
+        await notifyUpdate(targetScreen, true);
         res.json({ success: true, message: 'Playlist actualizada' });
     } catch (e) { 
         console.error(e);
@@ -361,7 +466,7 @@ app.post('/api/publish', requireAuth, (req, res) => {
                 });
             }
 
-            await notifyUpdate(targetScreen);
+            await notifyUpdate(targetScreen, true);
             res.json({ success: true, message: `${req.files.length} elementos agregados` });
         } catch (e) {
             console.error(e);
@@ -374,13 +479,13 @@ app.post('/api/clear', requireAuth, async (req, res) => {
     const { targetScreen } = req.body;
     try {
         await PlaylistItem.destroy({ where: { targetScreen } });
-        await notifyUpdate(targetScreen);
+        await notifyUpdate(targetScreen, true);
         res.json({ success: true, message: 'Playlist limpiada' });
     } catch (e) { res.status(500).json({ message: 'Error' }); }
 });
 
 // --- NOTIFICACIONES SOCKET ---
-async function notifyUpdate(targetScreen) {
+async function notifyUpdate(targetScreen, restart = false) {
     if (targetScreen === 'ALL') {
         // Notificar a todos los que dependen de Global
         for (const [sid, data] of Object.entries(connectedSockets)) {
@@ -390,17 +495,19 @@ async function notifyUpdate(targetScreen) {
             
             if (!hasOwn && screen && screen.authorized) {
                 const playlist = await getEffectivePlaylist(data.screenId);
-                io.to(sid).emit('update_playlist', playlist);
+                io.to(sid).emit('update_playlist', { playlist, restart });
             }
         }
     } else {
         // Notificar pantalla específica
-        const socketEntry = Object.entries(connectedSockets).find(([_, s]) => s.screenId === targetScreen);
-        if (socketEntry) {
+        const matchingSockets = Object.entries(connectedSockets).filter(([_, s]) => s.screenId === targetScreen);
+        if (matchingSockets.length > 0) {
             const screen = await Screen.findOne({ where: { screenId: targetScreen } });
             if (screen && screen.authorized) {
                 const playlist = await getEffectivePlaylist(targetScreen);
-                io.to(socketEntry[0]).emit('update_playlist', playlist);
+                for (const [sid] of matchingSockets) {
+                    io.to(sid).emit('update_playlist', { playlist, restart });
+                }
             }
         }
     }
@@ -421,7 +528,7 @@ io.on('connection', (socket) => {
         if (screen && screen.authorized) {
             socket.emit('authorization_change', { authorized: true });
             const playlist = await getEffectivePlaylist(screenId);
-            socket.emit('update_playlist', playlist);
+            socket.emit('update_playlist', { playlist, restart: true });
         } else {
             socket.emit('authorization_change', { authorized: false });
         }
