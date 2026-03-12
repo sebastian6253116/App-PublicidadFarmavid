@@ -223,8 +223,30 @@
             const currentSlot = slots[currentSlotIndex];
             const nextSlot = slots[nextSlotIndex];
 
+            // --- OPTIMIZACIÓN VIDEO ÚNICO ---
+            // Si la playlist tiene solo 1 item y es video, usar loop nativo en el mismo slot
+            // para evitar parpadeos o crashes al recrear el elemento constantemente.
+            if (currentPlaylist.length === 1 && item.type === 'video') {
+                // Verificar si ya estamos reproduciendo este video en el slot actual
+                const existingVideo = currentSlot.querySelector('video');
+                if (existingVideo && existingVideo.src.endsWith(item.url.split('/').pop())) {
+                    // Ya está reproduciendo el mismo video. Asegurar loop y salir.
+                    existingVideo.loop = true;
+                    existingVideo.onended = null; // Quitar listener para que no salte
+                    if (existingVideo.paused) existingVideo.play().catch(e => console.error(e));
+                    return; 
+                }
+            }
+
             // Preparar contenido en el siguiente slot
-            nextSlot.innerHTML = ''; // Limpiar previo
+            // IMPORTANTE: Limpiar bien el slot anterior para liberar memoria
+            nextSlot.innerHTML = ''; 
+            
+            // Limpiar también el slot actual (que pasará a ser el "viejo") DESPUÉS de la transición
+            // para evitar que se acumulen videos en memoria si el garbage collector es lento.
+            // Pero no podemos borrarlo YA porque se tiene que ver durante la transición.
+            // Lo haremos en el siguiente ciclo o con un timeout largo.
+            
             let element;
 
             if (item.type === 'video') {
@@ -241,14 +263,35 @@
                 element.onended = () => {
                     nextSlide();
                 };
+                
                 // Fallback por si falla autoplay
-                element.onerror = () => nextSlide();
+                element.onerror = () => {
+                    console.error("Error video", item.url);
+                    setTimeout(nextSlide, 2000);
+                };
+
+                // Intentar reproducir explícitamente para capturar errores de políticas de autoplay
+                // (Aunque autoplay=true suele bastar, en algunos TVs ayuda)
+                element.play().catch(e => {
+                    console.warn("Autoplay falló, intentando muteado", e);
+                    element.muted = true;
+                    element.play().catch(err => {
+                        console.error("No se pudo reproducir video", err);
+                        setTimeout(nextSlide, 3000); // Saltar si falla fatalmente
+                    });
+                });
+
             } else {
                 element = document.createElement('img');
                 element.src = item.url;
                 element.style.width = '100%';
                 element.style.height = '100%';
                 element.style.objectFit = 'contain';
+                
+                element.onerror = () => {
+                     console.error("Error imagen", item.url);
+                     setTimeout(nextSlide, 2000);
+                };
             }
             
             nextSlot.appendChild(element);
@@ -262,6 +305,24 @@
 
             nextSlot.classList.add('active');
             currentSlot.classList.remove('active');
+            
+            // LIMPIEZA AGRESIVA DE RECURSOS DEL SLOT ANTERIOR (currentSlot)
+            // Detener videos anteriores para liberar decodificadores de hardware del TV
+            const oldVideo = currentSlot.querySelector('video');
+            if (oldVideo) {
+                // Esperar a que termine la transición (ej. 1.5s) antes de matar el video anterior
+                setTimeout(() => {
+                    oldVideo.pause();
+                    oldVideo.src = ""; // Liberar buffer
+                    oldVideo.load();
+                    currentSlot.innerHTML = ''; // Vaciar DOM
+                }, 2000); 
+            } else {
+                 // Si era imagen, también limpiar después de la transición
+                 setTimeout(() => {
+                    currentSlot.innerHTML = '';
+                 }, 2000);
+            }
 
             // Actualizar índice de slot
             currentSlotIndex = nextSlotIndex;
