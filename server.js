@@ -9,7 +9,12 @@ const { initDB, User, Screen, MediaItem, PlaylistItem, Playlist, SavedPlaylistIt
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 app.use(cors());
 app.use(express.json());
