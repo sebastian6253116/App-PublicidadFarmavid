@@ -315,17 +315,20 @@
                         directory: 'DATA'
                     });
                     
+                    const finalUrl = Capacitor.convertFileSrc(fileUri.uri);
+                    log(`Cargando local: ${finalUrl}`);
+
                     finalPlaylist.push({
                         ...item,
-                        url: Capacitor.convertFileSrc(fileUri.uri)
+                        url: finalUrl
                     });
                 } catch (e) {
                     // No existe, descargar
                     statusDesc.innerText = `Descargando ${i + 1}/${playlist.length}`;
+                    log(`Descargando: ${item.url}`);
                     
                     try {
                         const downloadUrl = item.url.startsWith('http') ? item.url : SERVER_URL + item.url;
-                        console.log("Downloading", downloadUrl);
                         
                         await Http.downloadFile({
                             url: downloadUrl,
@@ -338,14 +341,21 @@
                             directory: 'DATA'
                         });
 
+                        const finalUrl = Capacitor.convertFileSrc(fileUri.uri);
+                        log(`Descarga ok, URL: ${finalUrl}`);
+
                         finalPlaylist.push({
                             ...item,
-                            url: Capacitor.convertFileSrc(fileUri.uri)
+                            url: finalUrl
                         });
                     } catch (downloadError) {
                         console.error("Error bajando", item.url, downloadError);
-                        // Fallback a remoto
-                        finalPlaylist.push(item);
+                        log(`Error bajando: ${downloadError.message}`);
+                        // Fallback a remoto absoluto
+                        finalPlaylist.push({
+                            ...item,
+                            url: item.url.startsWith('http') ? item.url : SERVER_URL + item.url
+                        });
                     }
                 }
             }
@@ -447,14 +457,18 @@
                 element.style.height = '100%';
                 element.style.objectFit = 'contain';
                 
+                log(`Reproduciendo video: ${item.url}`);
+                
                 // Evento para cuando termine el video
                 element.onended = () => {
+                    log("Video terminó, siguiente...");
                     nextSlide();
                 };
                 
                 // Fallback por si falla autoplay
-                element.onerror = () => {
-                    console.error("Error video", item.url);
+                element.onerror = (e) => {
+                    console.error("Error video", item.url, e);
+                    log(`Error video: ${item.url}`);
                     setTimeout(nextSlide, 2000);
                 };
 
@@ -476,8 +490,11 @@
                 element.style.height = '100%';
                 element.style.objectFit = 'contain';
                 
-                element.onerror = () => {
-                     console.error("Error imagen", item.url);
+                log(`Mostrando imagen: ${item.url} (Dur: ${item.duration || 5000}ms)`);
+                
+                element.onerror = (e) => {
+                     console.error("Error imagen", item.url, e);
+                     log(`Error imagen: ${item.url}`);
                      setTimeout(nextSlide, 2000);
                 };
             }

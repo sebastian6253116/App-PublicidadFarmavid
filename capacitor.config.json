@@ -3,7 +3,8 @@
   "appName": "FarmaVid Player",
   "webDir": "public",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "http",
+    "cleartext": true
   },
   "plugins": {
     "KeepAwake": {
