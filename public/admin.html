@@ -447,9 +447,9 @@
             <h3>Editar Elemento</h3>
             <input type="hidden" id="editItemId">
             
-            <label>Duración (ms):</label>
+            <label>Duración (segundos):</label>
             <input type="number" id="editDuration" placeholder="Default">
-            <small style="color:#666">Solo para imágenes</small>
+            <small style="color:#666; display:block; margin-bottom:10px;">Solo para imágenes</small>
 
             <label>Transición:</label>
             <select id="editTransition">
@@ -664,7 +664,8 @@
             const item = currentPlaylistData[index];
             
             document.getElementById('editItemId').value = item.id; // ID de PlaylistItem
-            document.getElementById('editDuration').value = item.duration || ''; // Si es null, usa default
+            // Mostrar duración en segundos al usuario (si existe)
+            document.getElementById('editDuration').value = item.duration ? (item.duration / 1000) : ''; 
             document.getElementById('editTransition').value = item.transition || '';
             
             // Mostrar modal
@@ -686,7 +687,7 @@
                     method: 'PUT',
                     headers: { ...apiHeaders, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        duration: duration ? parseInt(duration) : null, 
+                        duration: duration ? parseInt(duration) * 1000 : null, // Convertir a milisegundos
                         transition: transition || null 
                     })
                 });
