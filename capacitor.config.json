@@ -2,9 +2,15 @@
   "appId": "com.farmavid.tvplayer",
   "appName": "FarmaVid Player",
   "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  },
   "plugins": {
     "KeepAwake": {
       "allowDisplaySleep": false
+    },
+    "CapacitorHttp": {
+      "enabled": false
     }
   }
 }

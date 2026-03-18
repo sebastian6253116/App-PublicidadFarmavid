@@ -70,8 +70,26 @@
         <div id="slot1" class="slide-item"></div>
     </div>
 
+    <!-- Debug Console -->
+    <div id="debugConsole" style="position:fixed; bottom:5px; left:5px; width:40%; max-height:200px; overflow-y:auto; color:lime; font-size:10px; background:rgba(0,0,0,0.5); font-family:monospace; z-index:1000; pointer-events:none; display:block;"></div>
+
     <script src="js/socket.io.js"></script>
     <script>
+        // Logger
+        const debugConsole = document.getElementById('debugConsole');
+        function log(msg) {
+            console.log(msg);
+            if (debugConsole) {
+                const line = document.createElement('div');
+                line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+                debugConsole.appendChild(line);
+                debugConsole.scrollTop = debugConsole.scrollHeight;
+            }
+        }
+        window.onerror = function(msg, url, line) {
+            log(`ERROR: ${msg} (${url}:${line})`);
+        };
+
         // Declarar elementos UI AL INICIO
         const statusTitle = document.getElementById('statusTitle');
         const statusDesc = document.getElementById('statusDesc');
@@ -88,21 +106,38 @@
         const SERVER_URL = Capacitor.isNativePlatform() ? 'https://tv.farmavid.com.ve' : '';
         
         if (statusDesc) statusDesc.innerText = "Intentando conectar a: " + (SERVER_URL || 'Localhost');
+        log("Iniciando Socket.io a: " + SERVER_URL);
         
         const socket = io(SERVER_URL, {
             reconnection: true,
             reconnectionDelay: 5000,
             reconnectionAttempts: Infinity,
-            transports: ['websocket', 'polling'] // Forzar transportes
+            transports: ['websocket'], // Forzar solo Websocket para evitar problemas de polling/cors
+            forceNew: true
         });
         
         socket.on('connect_error', (err) => {
+            log('Connection Error: ' + err.message);
             console.error('Connection Error:', err);
             if (statusTitle) {
                 statusTitle.innerText = "Error de Conexión";
                 statusTitle.style.color = "#ff6b6b";
             }
             if (statusDesc) statusDesc.innerText = `No se pudo conectar al servidor.\n${err.message}`;
+        });
+
+        socket.on('connect', () => {
+            log('Socket conectado!');
+            statusTitle.innerText = "Conectado";
+            statusDesc.innerText = `ID: ${myScreenId}`;
+            
+            const isApk = Capacitor.isNativePlatform(); // Usar API real
+            socket.emit('register_screen', { screenId: myScreenId, isApk });
+        });
+
+        socket.on('disconnect', (reason) => {
+            log('Desconectado: ' + reason);
+            statusTitle.innerText = "Desconectado";
         });
         
         // GESTIÓN DE ID DE PANTALLA PERSISTENTE
@@ -156,6 +191,7 @@
 
         // Socket
         socket.on('connect', () => {
+            log('Socket conectado!');
             statusTitle.innerText = "Conectado";
             statusDesc.innerText = `ID: ${myScreenId}`;
             
@@ -164,6 +200,7 @@
         });
 
         socket.on('authorization_change', (data) => {
+            log('Auth change: ' + data.authorized);
             isAuthorized = data.authorized;
             if (isAuthorized) {
                 // ¡AUTORIZADA! -> Guardar ID para siempre
@@ -195,6 +232,7 @@
         });
 
         socket.on('update_playlist', async (data) => {
+            log('Playlist recibida');
             if (!isAuthorized) return;
             
             // Soporte para nuevo formato { playlist, restart } o antiguo (array directo)
