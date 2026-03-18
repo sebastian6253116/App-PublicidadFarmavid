@@ -72,6 +72,11 @@
 
     <script src="js/socket.io.js"></script>
     <script>
+        // Declarar elementos UI AL INICIO
+        const statusTitle = document.getElementById('statusTitle');
+        const statusDesc = document.getElementById('statusDesc');
+        const statusMsg = document.getElementById('statusMsg');
+
         // --- OFFLINE MODE IMPORTS ---
         // Simular Capacitor si no existe para evitar errores en web
         const Capacitor = window.Capacitor || { isNativePlatform: () => false };
@@ -82,7 +87,7 @@
         // Si es nativo, usar URL absoluta. Si es web, usar relativa.
         const SERVER_URL = Capacitor.isNativePlatform() ? 'https://tv.farmavid.com.ve' : '';
         
-        statusDesc.innerText = "Intentando conectar a: " + (SERVER_URL || 'Localhost');
+        if (statusDesc) statusDesc.innerText = "Intentando conectar a: " + (SERVER_URL || 'Localhost');
         
         const socket = io(SERVER_URL, {
             reconnection: true,
@@ -93,9 +98,11 @@
         
         socket.on('connect_error', (err) => {
             console.error('Connection Error:', err);
-            statusTitle.innerText = "Error de Conexión";
-            statusDesc.innerText = `No se pudo conectar al servidor.\n${err.message}`;
-            statusTitle.style.color = "#ff6b6b";
+            if (statusTitle) {
+                statusTitle.innerText = "Error de Conexión";
+                statusTitle.style.color = "#ff6b6b";
+            }
+            if (statusDesc) statusDesc.innerText = `No se pudo conectar al servidor.\n${err.message}`;
         });
         
         // GESTIÓN DE ID DE PANTALLA PERSISTENTE
@@ -124,10 +131,6 @@
 
         // Variable para controlar si guardamos el ID
         let currentIdIsSaved = !!localStorage.getItem('tv_device_id');
-
-        const statusTitle = document.getElementById('statusTitle');
-        const statusDesc = document.getElementById('statusDesc');
-        const statusMsg = document.getElementById('statusMsg');
         
         // Slots
         const slots = [document.getElementById('slot0'), document.getElementById('slot1')];
