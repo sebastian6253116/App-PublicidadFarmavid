@@ -81,10 +81,21 @@
         // Configuración Servidor
         // Si es nativo, usar URL absoluta. Si es web, usar relativa.
         const SERVER_URL = Capacitor.isNativePlatform() ? 'https://tv.farmavid.com.ve' : '';
+        
+        statusDesc.innerText = "Intentando conectar a: " + (SERVER_URL || 'Localhost');
+        
         const socket = io(SERVER_URL, {
             reconnection: true,
             reconnectionDelay: 5000,
-            reconnectionAttempts: Infinity
+            reconnectionAttempts: Infinity,
+            transports: ['websocket', 'polling'] // Forzar transportes
+        });
+        
+        socket.on('connect_error', (err) => {
+            console.error('Connection Error:', err);
+            statusTitle.innerText = "Error de Conexión";
+            statusDesc.innerText = `No se pudo conectar al servidor.\n${err.message}`;
+            statusTitle.style.color = "#ff6b6b";
         });
         
         // GESTIÓN DE ID DE PANTALLA PERSISTENTE
