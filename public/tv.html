@@ -129,7 +129,10 @@
         socket.on('connect', () => {
             statusTitle.innerText = "Conectado";
             statusDesc.innerText = `ID: ${myScreenId}`;
-            socket.emit('register_screen', myScreenId);
+            
+            // Detectar si es la APK nativa leyendo el User-Agent configurado en Capacitor
+            const isApk = navigator.userAgent.includes('FarmaVid-APK');
+            socket.emit('register_screen', { screenId: myScreenId, isApk });
         });
 
         socket.on('authorization_change', (data) => {

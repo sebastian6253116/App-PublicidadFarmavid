@@ -135,13 +135,17 @@ app.get('/api/screens', requireAuth, async (req, res) => {
 
     // Pantallas en BD
     const dbScreens = await Screen.findAll();
-    const result = dbScreens.map(s => ({
-        id: s.screenId,
-        authorized: s.authorized,
-        online: Object.values(connectedSockets).some(sock => sock.screenId === s.screenId),
-        name: s.name,
-        lastSeen: s.lastSeen
-    }));
+    const result = dbScreens.map(s => {
+        const socketData = Object.values(connectedSockets).find(sock => sock.screenId === s.screenId);
+        return {
+            id: s.screenId,
+            authorized: s.authorized,
+            online: !!socketData,
+            isApk: socketData ? socketData.isApk : false,
+            name: s.name,
+            lastSeen: s.lastSeen
+        };
+    });
 
     // Pantallas online pero NO en BD (nuevas)
     for (const [socketId, data] of Object.entries(connectedSockets)) {
@@ -150,6 +154,7 @@ app.get('/api/screens', requireAuth, async (req, res) => {
                 id: data.screenId,
                 authorized: false,
                 online: true,
+                isApk: data.isApk,
                 name: data.screenId
             });
         }
@@ -514,9 +519,20 @@ async function notifyUpdate(targetScreen, restart = false) {
 }
 
 io.on('connection', (socket) => {
-    socket.on('register_screen', async (screenId) => {
-        connectedSockets[socket.id] = { screenId };
-        console.log(`Pantalla conectada: ${screenId}`);
+    socket.on('register_screen', async (data) => {
+        // Soporte para cliente antiguo (string) o nuevo (objeto con isApk)
+        let screenId = '';
+        let isApk = false;
+        
+        if (typeof data === 'string') {
+            screenId = data;
+        } else if (data && data.screenId) {
+            screenId = data.screenId;
+            isApk = !!data.isApk;
+        }
+
+        connectedSockets[socket.id] = { screenId, isApk };
+        console.log(`Pantalla conectada: ${screenId} (APK: ${isApk})`);
         
         const screen = await Screen.findOne({ where: { screenId } });
 
