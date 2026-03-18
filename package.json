@@ -13,11 +13,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@capacitor-community/http": "^1.4.1",
     "@capacitor-community/keep-awake": "^8.0.0",
     "@capacitor/android": "^8.1.0",
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.1.0",
     "@capacitor/core": "^8.1.0",
+    "@capacitor/filesystem": "^8.1.2",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "multer": "^2.1.0",

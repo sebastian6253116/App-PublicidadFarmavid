@@ -72,7 +72,20 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+        // --- OFFLINE MODE IMPORTS ---
+        // Simular Capacitor si no existe para evitar errores en web
+        const Capacitor = window.Capacitor || { isNativePlatform: () => false };
+        const Filesystem = window.Capacitor?.Plugins?.Filesystem;
+        const Http = window.Capacitor?.Plugins?.Http;
+
+        // Configuración Servidor
+        // Si es nativo, usar URL absoluta. Si es web, usar relativa.
+        const SERVER_URL = Capacitor.isNativePlatform() ? 'https://tv.farmavid.com.ve' : '';
+        const socket = io(SERVER_URL, {
+            reconnection: true,
+            reconnectionDelay: 5000,
+            reconnectionAttempts: Infinity
+        });
         
         // GESTIÓN DE ID DE PANTALLA PERSISTENTE
         // 1. Buscar en URL (?id=...)
@@ -116,6 +129,8 @@
 
         // Fullscreen
         const fsBtn = document.getElementById('fsBtn');
+        if (Capacitor.isNativePlatform()) fsBtn.style.display = 'none'; // Ocultar en TV nativo
+
         fsBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(e=>console.log(e));
             else if (document.exitFullscreen) document.exitFullscreen();
@@ -130,8 +145,7 @@
             statusTitle.innerText = "Conectado";
             statusDesc.innerText = `ID: ${myScreenId}`;
             
-            // Detectar si es la APK nativa leyendo el User-Agent configurado en Capacitor
-            const isApk = navigator.userAgent.includes('FarmaVid-APK');
+            const isApk = Capacitor.isNativePlatform(); // Usar API real
             socket.emit('register_screen', { screenId: myScreenId, isApk });
         });
 
@@ -166,7 +180,7 @@
             }
         });
 
-        socket.on('update_playlist', (data) => {
+        socket.on('update_playlist', async (data) => {
             if (!isAuthorized) return;
             
             // Soporte para nuevo formato { playlist, restart } o antiguo (array directo)
@@ -180,21 +194,131 @@
                 if (data.restart !== undefined) shouldRestart = data.restart;
             }
 
+            // --- DOWNLOAD MANAGER (Offline Mode) ---
+            if (Capacitor.isNativePlatform()) {
+                statusMsg.style.display = 'block';
+                statusTitle.innerText = "Sincronizando...";
+                statusDesc.innerText = "Verificando archivos...";
+                
+                try {
+                    // Descargar contenido
+                    newPlaylist = await syncContent(newPlaylist);
+                    statusMsg.style.display = 'none';
+                } catch (e) {
+                    console.error("Error sync:", e);
+                    statusDesc.innerText = "Error descargando contenido";
+                    // Intentar reproducir con lo que haya
+                }
+            }
+
             currentPlaylist = newPlaylist;
             
             if (shouldRestart) {
                 currentIndex = 0;
                 startPlayback();
             } else {
-                // Si no se fuerza reinicio, solo actualizamos la lista
-                // Si el índice actual excede la nueva longitud, ajustar
                 if (currentIndex >= currentPlaylist.length) {
                     currentIndex = 0;
                     startPlayback();
                 }
-                // Si estamos reproduciendo, la próxima diapositiva usará la nueva lista
             }
         });
+
+        async function syncContent(playlist) {
+            if (!Filesystem || !Http) return playlist;
+            
+            // Crear directorio media si no existe
+            try { await Filesystem.mkdir({ path: 'media', directory: 'DATA', recursive: true }); } catch(e) {}
+
+            const finalPlaylist = [];
+            const filesToKeep = new Set();
+            
+            // ... resto del codigo ...
+            for (let i = 0; i < playlist.length; i++) {
+                const item = playlist[i];
+                const filename = item.url.split('/').pop(); // Extraer nombre archivo
+                const localPath = `media/${filename}`; // Carpeta 'media' en DATA
+                
+                filesToKeep.add(filename);
+
+                try {
+                    // Verificar si existe
+                    await Filesystem.stat({
+                        path: localPath,
+                        directory: 'DATA'
+                    });
+                    
+                    // Obtener URI local
+                    const fileUri = await Filesystem.getUri({
+                        path: localPath,
+                        directory: 'DATA'
+                    });
+                    
+                    finalPlaylist.push({
+                        ...item,
+                        url: Capacitor.convertFileSrc(fileUri.uri)
+                    });
+                } catch (e) {
+                    // No existe, descargar
+                    statusDesc.innerText = `Descargando ${i + 1}/${playlist.length}`;
+                    
+                    try {
+                        const downloadUrl = item.url.startsWith('http') ? item.url : SERVER_URL + item.url;
+                        console.log("Downloading", downloadUrl);
+                        
+                        await Http.downloadFile({
+                            url: downloadUrl,
+                            filePath: localPath,
+                            fileDirectory: 'DATA'
+                        });
+
+                        const fileUri = await Filesystem.getUri({
+                            path: localPath,
+                            directory: 'DATA'
+                        });
+
+                        finalPlaylist.push({
+                            ...item,
+                            url: Capacitor.convertFileSrc(fileUri.uri)
+                        });
+                    } catch (downloadError) {
+                        console.error("Error bajando", item.url, downloadError);
+                        // Fallback a remoto
+                        finalPlaylist.push(item);
+                    }
+                }
+            }
+            
+            // LIMPIEZA
+            await cleanupStorage(filesToKeep);
+            
+            return finalPlaylist;
+        }
+
+        async function cleanupStorage(validFiles) {
+            try {
+                const result = await Filesystem.readdir({
+                    path: 'media',
+                    directory: 'DATA'
+                });
+                
+                // result.files es un array de objetos { name, type, ... } en versiones nuevas
+                // o strings en viejas. Capacitor 5/6 usa objetos.
+                const files = result.files.map(f => f.name || f);
+
+                for (const fileName of files) {
+                    if (!validFiles.has(fileName)) {
+                        console.log("Borrando archivo obsoleto:", fileName);
+                        await Filesystem.deleteFile({
+                            path: `media/${fileName}`,
+                            directory: 'DATA'
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn("Error en limpieza (puede que esté vacío):", e);
+            }
+        }
 
         function resetSlots() {
             slots[0].className = 'slide-item';

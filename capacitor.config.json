@@ -2,11 +2,6 @@
   "appId": "com.farmavid.tvplayer",
   "appName": "FarmaVid Player",
   "webDir": "public",
-  "server": {
-    "url": "https://tv.farmavid.com.ve/tv.html",
-    "cleartext": true,
-    "appendUserAgent": "FarmaVid-APK"
-  },
   "plugins": {
     "KeepAwake": {
       "allowDisplaySleep": false
