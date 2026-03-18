@@ -70,10 +70,9 @@
         <div id="slot1" class="slide-item"></div>
     </div>
 
-    <!-- Debug Console -->
     <div id="debugConsole" style="position:fixed; bottom:5px; left:5px; width:40%; max-height:200px; overflow-y:auto; color:lime; font-size:10px; background:rgba(0,0,0,0.5); font-family:monospace; z-index:1000; pointer-events:none; display:block;"></div>
 
-    <script src="js/socket.io.js"></script>
+    <script src="js/socket.io.js" onerror="console.error('Failed to load socket.io.js'); if(document.getElementById('debugConsole')) document.getElementById('debugConsole').innerHTML += '<div>[ERROR] Failed to load js/socket.io.js</div>'"></script>
     <script>
         // Logger
         const debugConsole = document.getElementById('debugConsole');
