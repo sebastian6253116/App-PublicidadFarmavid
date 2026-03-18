@@ -70,7 +70,7 @@
         <div id="slot1" class="slide-item"></div>
     </div>
 
-    <div id="debugConsole" style="position:fixed; bottom:5px; left:5px; width:40%; max-height:200px; overflow-y:auto; color:lime; font-size:10px; background:rgba(0,0,0,0.5); font-family:monospace; z-index:1000; pointer-events:none; display:block;"></div>
+    <div id="debugConsole" style="position:fixed; bottom:5px; left:5px; width:40%; max-height:200px; overflow-y:auto; color:lime; font-size:10px; background:rgba(0,0,0,0.5); font-family:monospace; z-index:1000; pointer-events:none; display:none;"></div>
 
     <script src="js/socket.io.js" onerror="console.error('Failed to load socket.io.js'); if(document.getElementById('debugConsole')) document.getElementById('debugConsole').innerHTML += '<div>[ERROR] Failed to load js/socket.io.js</div>'"></script>
     <script>
@@ -118,6 +118,10 @@
         socket.on('connect_error', (err) => {
             log('Connection Error: ' + err.message);
             console.error('Connection Error:', err);
+            
+            // Si hay error, mostrar consola para ver qué pasa
+            if (debugConsole) debugConsole.style.display = 'block';
+
             if (statusTitle) {
                 statusTitle.innerText = "Error de Conexión";
                 statusTitle.style.color = "#ff6b6b";
@@ -201,6 +205,12 @@
         socket.on('authorization_change', (data) => {
             log('Auth change: ' + data.authorized);
             isAuthorized = data.authorized;
+            
+            // Controlar visibilidad de consola: Solo visible si NO está autorizado
+            if (debugConsole) {
+                debugConsole.style.display = isAuthorized ? 'none' : 'block';
+            }
+
             if (isAuthorized) {
                 // ¡AUTORIZADA! -> Guardar ID para siempre
                 localStorage.setItem('tv_device_id', myScreenId);
