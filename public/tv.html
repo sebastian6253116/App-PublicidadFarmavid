@@ -135,43 +135,31 @@
             if (statusDesc) statusDesc.innerText = `No se pudo conectar al servidor.\n${err.message}`;
         });
 
-        socket.on('connect', () => {
-            log('Socket conectado!');
-            statusTitle.innerText = "Conectado";
-            statusDesc.innerText = `ID: ${myScreenId}`;
-            
-            const isApk = Capacitor.isNativePlatform(); // Usar API real
-            socket.emit('register_screen', { screenId: myScreenId, isApk });
-        });
-
         socket.on('disconnect', (reason) => {
             log('Desconectado: ' + reason);
             statusTitle.innerText = "Desconectado";
         });
         
-        // GESTIÓN DE ID DE PANTALLA PERSISTENTE
-        // 1. Buscar en URL (?id=...)
+        // GESTIÓN DE ID DE PANTALLA PERSISTENTE (ID ESTABLE)
+        // El ID debe permanecer SIEMPRE igual: si la TV se reinicia o se corta la luz,
+        // reconecta con el MISMO ID y vuelve a aparecer como la misma pantalla pendiente.
+        // 1. Buscar en URL (?id=...) - prioridad máxima.
         const params = new URLSearchParams(window.location.search);
         let myScreenId = params.get('id');
 
-        // 2. Si no hay en URL, buscar en LocalStorage
+        // 2. Si no hay en URL, buscar en LocalStorage (ID ya registrado antes).
         if (!myScreenId) {
             myScreenId = localStorage.getItem('tv_device_id');
         }
 
-        // 3. Si no existe, generar uno NUEVO TEMPORAL (se guardará solo si se autoriza)
-        // Nota: El usuario pidió que CAMBIE si no está autorizada al refrescar.
-        // Por lo tanto, si no está autorizado, generamos uno nuevo siempre al cargar si no venía en URL.
-        // Pero espera, si ya estaba autorizado, debe "recordarlo".
-        
-        // Lógica refinada:
-        // - Si hay ID en URL, usar ese (prioridad máxima).
-        // - Si hay ID en LocalStorage, usar ese (significa que ya fue "registrado" o "autorizado" antes).
-        // - Si NO hay en ninguno, generar uno nuevo aleatorio.
-        
+        // 3. Si no hay en ninguno, generar uno nuevo aleatorio.
         if (!myScreenId) {
             myScreenId = 'TV-' + Math.floor(Math.random() * 10000);
         }
+
+        // Persistimos SIEMPRE el ID resuelto, incluso si todavía NO está autorizada.
+        // Esto lo deja clavado en el dispositivo y sobrevive a reinicios y recargas.
+        localStorage.setItem('tv_device_id', myScreenId);
 
         // Variable para controlar si guardamos el ID
         let currentIdIsSaved = !!localStorage.getItem('tv_device_id');
@@ -222,16 +210,9 @@
                 statusMsg.style.display = 'block';
             } else {
                 // NO AUTORIZADA
-                
-                // Si NO estaba guardada previamente (es nueva), borrar del storage para que al refrescar cambie
-                // Si YA estaba guardada (era una TV vieja que desautorizamos), mantenemos el ID por si la vuelven a autorizar?
-                // El requerimiento dice: "si esta no es autorizada cambie tantas veces el usuario refresque"
-                // Esto implica que si le quito el permiso, debería olvidar su ID?
-                // Generalmente, si le quito el permiso es para bloquearla. Si refresca, generará otro ID y aparecerá como nueva.
-                // Vamos a borrar el ID del storage si no está autorizada.
-                
-                localStorage.removeItem('tv_device_id');
-                currentIdIsSaved = false;
+                // El ID se mantiene persistido AUNQUE no esté autorizada.
+                // Así, al reiniciar o cortar la luz, la TV vuelve a pedir aprobación
+                // con el MISMO ID en vez de aparecer como una pantalla nueva.
 
                 clearTimeout(rotationTimer);
                 resetSlots();

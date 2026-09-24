@@ -26,7 +26,8 @@ const User = sequelize.define('User', {
 const Screen = sequelize.define('Screen', {
     screenId: { type: DataTypes.STRING, allowNull: false, unique: true },
     name: { type: DataTypes.STRING, allowNull: false },
-    authorized: { type: DataTypes.BOOLEAN, defaultValue: false }
+    authorized: { type: DataTypes.BOOLEAN, defaultValue: false },
+    lastSeen: { type: DataTypes.DATE, allowNull: true }
 });
 
 // Elemento Multimedia (Imagen/Video)
@@ -75,10 +76,26 @@ const initDB = async () => {
         await sequelize.authenticate();
         console.log('✅ Conexión a MySQL exitosa.');
         
-        // Sincronizar modelos (crear tablas si no existen o ALTER si cambiaron)
-        // 'alter: true' intenta adaptar la tabla a los nuevos campos (como lastSeen)
-        await sequelize.sync({ alter: true });
-        console.log('✅ Base de datos sincronizada (alter: true).');
+        // Sincronizar modelos: crea tablas si no existen, pero NUNCA altera las existentes.
+        // OJO: la opción alter de sync() está PROHIBIDA en producción porque puede ELIMINAR
+        // columnas que existen en la base de datos pero no en el modelo, destruyendo datos de
+        // forma irreversible. Por eso usamos sync() simple y migramos a mano de forma idempotente.
+        await sequelize.sync();
+        console.log('✅ Base de datos sincronizada.');
+
+        // Migración idempotente: agregar 'lastSeen' a Screens si falta.
+        // La limpieza de pantallas no autorizadas depende de esta columna.
+        // Si algo falla acá, avisamos FUERTE pero NO tumbamos el arranque: la app debe seguir viva.
+        try {
+            const qi = sequelize.getQueryInterface();
+            const cols = await qi.describeTable('Screens');
+            if (!cols.lastSeen) {
+                await qi.addColumn('Screens', 'lastSeen', { type: DataTypes.DATE, allowNull: true });
+                console.log('✅ Columna lastSeen agregada a la tabla Screens.');
+            }
+        } catch (migrationError) {
+            console.error('❌ ERROR CRÍTICO en migración de lastSeen:', migrationError.message);
+        }
         
         // Crear admin por defecto si no existe
         const [admin, created] = await User.findOrCreate({

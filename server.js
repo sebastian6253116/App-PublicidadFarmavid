@@ -152,18 +152,9 @@ app.get('/api/screens', requireAuth, async (req, res) => {
         };
     });
 
-    // Pantallas online pero NO en BD (nuevas)
-    for (const [socketId, data] of Object.entries(connectedSockets)) {
-        if (!result.find(r => r.id === data.screenId)) {
-            result.push({
-                id: data.screenId,
-                authorized: false,
-                online: true,
-                isApk: data.isApk,
-                name: data.screenId
-            });
-        }
-    }
+    // Nota: ya NO agregamos pantallas "online pero no en BD" desde connectedSockets.
+    // Ahora las pantallas pendientes se persisten en BD, y revivir entradas solo de memoria
+    // resucitaría pantallas que la limpieza de 5 minutos acaba de eliminar (rompiendo la regla).
     res.json(result);
 });
 
@@ -539,12 +530,14 @@ io.on('connection', (socket) => {
         connectedSockets[socket.id] = { screenId, isApk };
         console.log(`Pantalla conectada: ${screenId} (APK: ${isApk})`);
         
-        const screen = await Screen.findOne({ where: { screenId } });
-
-        if (screen) {
-            screen.lastSeen = new Date();
-            await screen.save();
-        }
+        // findOrCreate persiste la pantalla en BD aunque todavía no esté autorizada.
+        // Antes solo vivía en memoria (connectedSockets) y la limpieza de 5 min nunca la veía.
+        const [screen] = await Screen.findOrCreate({
+            where: { screenId },
+            defaults: { name: screenId, authorized: false }
+        });
+        screen.lastSeen = new Date();
+        await screen.save();
 
         if (screen && screen.authorized) {
             socket.emit('authorization_change', { authorized: true });
