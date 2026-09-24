@@ -1387,6 +1387,23 @@ h1, h2, h3, h4, p {
     max-width: 420px;
 }
 
+/* Altura de la appbar. La appbar es sticky, asi que la columna de control
+   necesita este offset para no meterse debajo de la barra. Ajustar si cambia. */
+:root {
+    --appbar-height: 68px;
+}
+
+/* Plantillas y Usuarios: apilados en movil (ahi nunca se ven a la vez) y en
+   fila en escritorio, para no dejarlos apilados desperdiciando el ancho. */
+.admin__subgrid {
+    display: block;
+}
+
+/* Duracion y transicion de la subida: apiladas en movil, en fila en escritorio. */
+.upload-grid {
+    display: block;
+}
+
 /* Cuerpo y grilla del panel. */
 .admin__main {
     padding: var(--sp-4);
@@ -1544,11 +1561,43 @@ h1, h2, h3, h4, p {
         display: none;
     }
 
+    /* Columna de control angosta + espacio de trabajo ancho. La Playlist es la
+       superficie mas densa del panel (previews, nombres, badges y controles),
+       asi que se lleva el ancho; el formulario de subida no necesita media
+       pantalla. Antes era un 50/50 exacto y eso desbalanceaba todo. */
     .admin__layout {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-columns: minmax(340px, 380px) minmax(0, 1fr);
         gap: var(--sp-5);
         align-items: start;
+    }
+
+    /* La columna de control queda fija mientras se recorre una playlist larga.
+       El offset suma la appbar (tambien sticky) para no quedar debajo. */
+    .admin__col--control {
+        position: sticky;
+        top: calc(var(--appbar-height) + var(--sp-4));
+    }
+
+    /* Plantillas y Usuarios comparten fila en vez de apilarse. */
+    .admin__subgrid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--sp-4);
+        align-items: start;
+    }
+
+    /* Duracion y transicion en una fila: el formulario de subida se acorta. */
+    .upload-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--sp-3);
+        align-items: start;
+    }
+
+    /* Filas de pantallas mas compactas: entran mas TVs sin scrollear. */
+    .admin-panel--screens .row {
+        padding: var(--sp-2) 0;
     }
 
     .admin-panel {

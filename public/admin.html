@@ -32,8 +32,8 @@
 
         <main class="admin__main">
             <div class="admin__layout" id="adminLayout" data-active-tab="pantallas">
-                <!-- Columna izquierda: Pantallas + Contenido -->
-                <div class="admin__col">
+                <!-- Columna izquierda (control): Pantallas + Subir contenido -->
+                <div class="admin__col admin__col--control">
                     <section class="card admin-panel admin-panel--screens" aria-labelledby="screensTitle">
                         <div class="card__header">
                             <h2 class="card__title" id="screensTitle">📡 Pantallas</h2>
@@ -54,21 +54,24 @@
                                     accept="image/*,video/*" multiple required>
                                 <span class="field__hint">Puedes seleccionar varios archivos a la vez.</span>
                             </div>
-                            <div class="field">
-                                <label class="field__label" for="uploadDuration">Duración de imágenes (segundos)</label>
-                                <input class="input" id="uploadDuration" name="duration" type="number"
-                                    value="10" min="3" step="1" inputmode="numeric">
-                                <span class="field__hint">Los videos usan su propia duración.</span>
-                            </div>
-                            <div class="field">
-                                <label class="field__label" for="uploadTransition">Transición de imágenes</label>
-                                <select class="select" id="uploadTransition" name="transition">
-                                    <option value="fade">Suave (Fade)</option>
-                                    <option value="slide-left">Deslizar izquierda</option>
-                                    <option value="slide-right">Deslizar derecha</option>
-                                    <option value="zoom-in">Zoom In</option>
-                                    <option value="none">Ninguna</option>
-                                </select>
+                            <!-- En escritorio estos dos campos comparten fila -->
+                            <div class="upload-grid">
+                                <div class="field">
+                                    <label class="field__label" for="uploadDuration">Duración de imágenes (segundos)</label>
+                                    <input class="input" id="uploadDuration" name="duration" type="number"
+                                        value="10" min="3" step="1" inputmode="numeric">
+                                    <span class="field__hint">Los videos usan su propia duración.</span>
+                                </div>
+                                <div class="field">
+                                    <label class="field__label" for="uploadTransition">Transición de imágenes</label>
+                                    <select class="select" id="uploadTransition" name="transition">
+                                        <option value="fade">Suave (Fade)</option>
+                                        <option value="slide-left">Deslizar izquierda</option>
+                                        <option value="slide-right">Deslizar derecha</option>
+                                        <option value="zoom-in">Zoom In</option>
+                                        <option value="none">Ninguna</option>
+                                    </select>
+                                </div>
                             </div>
                             <button class="btn btn--primary btn--block" type="submit">Subir y agregar</button>
                         </form>
@@ -95,6 +98,8 @@
                         </div>
                     </section>
 
+                    <!-- Plantillas y Usuarios: apilados en movil, en fila en escritorio -->
+                    <div class="admin__subgrid">
                     <section class="card admin-panel admin-panel--templates" aria-labelledby="templatesTitle">
                         <div class="card__header">
                             <h2 class="card__title" id="templatesTitle">📄 Plantillas guardadas</h2>
@@ -135,6 +140,7 @@
                             </form>
                         </div>
                     </section>
+                    </div><!-- /admin__subgrid -->
                 </div>
             </div>
         </main>
