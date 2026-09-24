@@ -3,1002 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Playlist</title>
-    <style>
-        :root {
-            --primary: #007bff;
-            --success: #28a745;
-            --danger: #dc3545;
-            --bg: #f0f2f5;
-            --card-bg: #ffffff;
-        }
-        
-        body { 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            padding: 20px; 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            background: var(--bg);
-            color: #333;
-        }
-
-        /* Header Responsive */
-        .header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 20px; 
-            flex-wrap: wrap; 
-            gap: 15px;
-        }
-        .header h1 { margin: 0; font-size: 1.5rem; }
-        .header > div { display: flex; gap: 10px; align-items: center; }
-
-        .logout-btn { 
-            background: none; 
-            border: 1px solid var(--danger); 
-            color: var(--danger); 
-            padding: 6px 15px; 
-            border-radius: 4px; 
-            cursor: pointer; 
-            font-size: 0.9rem;
-        }
-
-        /* Layout Grid */
-        .grid { 
-            display: grid; 
-            grid-template-columns: 300px 1fr; 
-            gap: 20px; 
-            align-items: start;
-        }
-
-        /* Cards */
-        .card { 
-            background: var(--card-bg); 
-            padding: 20px; 
-            border-radius: 10px; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
-            margin-bottom: 20px; 
-        }
-        h2 { font-size: 1.2rem; margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-        h3 { font-size: 1rem; margin-top: 15px; margin-bottom: 10px; }
-
-        /* Forms */
-        label { display: block; margin-top: 15px; font-weight: 600; color: #555; font-size: 0.9em; }
-        input, select { 
-            width: 100%; 
-            padding: 10px; 
-            margin-top: 5px; 
-            border: 1px solid #ddd; 
-            border-radius: 6px; 
-            box-sizing: border-box; 
-            font-size: 1rem;
-        }
-        
-        .btn { 
-            padding: 12px; 
-            border: none; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-weight: 600; 
-            transition: 0.2s; 
-            width: 100%; 
-            margin-top: 15px; 
-            font-size: 1rem;
-        }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-success { background: var(--success); color: white; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-sm { width: auto; padding: 5px 10px; font-size: 0.85em; margin: 0; }
-
-        /* Playlist Items */
-        #playlistContainer { min-height: 100px; border: 2px dashed #ddd; padding: 10px; border-radius: 6px; background: #fafafa; }
-        
-        .playlist-item { 
-            background: white; 
-            border: 1px solid #eee; 
-            padding: 10px; 
-            margin-bottom: 8px; 
-            border-radius: 6px; 
-            cursor: grab; 
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .playlist-item:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .playlist-item.dragging { opacity: 0.5; border: 2px dashed var(--primary); }
-        
-        .item-info { flex: 1; overflow: hidden; }
-        .item-name { font-weight: bold; font-size: 0.9em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
-        .type-badge { font-size: 0.7em; padding: 2px 6px; border-radius: 3px; font-weight: bold; text-transform: uppercase; display: inline-block; margin-top: 2px; }
-        .badge-video { background: #e3f2fd; color: #1565c0; }
-        .badge-image { background: #e8f5e9; color: #2e7d32; }
-
-        /* Media Queries para Móviles y Tablets */
-        @media (max-width: 900px) {
-            .grid { grid-template-columns: 1fr; } /* Columna única */
-            
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-            .header > div {
-                width: 100%;
-                justify-content: space-between;
-                margin-top: 5px;
-            }
-            
-            .card { padding: 15px; margin-bottom: 15px; }
-            
-            /* Playlist Items en Móvil */
-            .playlist-item {
-                display: grid;
-                grid-template-columns: 1fr auto; /* Content | Controls */
-                grid-template-rows: auto auto; /* Content row | Order Controls row */
-                gap: 10px;
-                align-items: center;
-                padding: 15px;
-                border-bottom: 4px solid #f0f2f5; /* Separación visual clara */
-            }
-            
-            .item-left {
-                grid-column: 1 / -1; /* Ocupa todo el ancho arriba */
-                display: flex;
-                flex-direction: row; /* Imagen a la izq, texto a la der */
-                align-items: center;
-                gap: 15px;
-            }
-            
-            .item-preview {
-                width: 80px;
-                height: 60px; 
-                margin-bottom: 0;
-                border-radius: 8px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-
-            .item-info {
-                flex: 1;
-            }
-            
-            .item-name {
-                font-size: 1rem;
-                color: #333;
-                font-weight: 700;
-            }
-            
-            /* Botones de control móvil */
-            .mobile-controls {
-                grid-column: 1 / -1; /* Fila inferior completa */
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                background: #f8f9fa;
-                padding: 8px;
-                border-radius: 8px;
-                margin-top: 5px;
-            }
-            
-            .order-buttons {
-                display: flex;
-                gap: 10px;
-            }
-            
-            .btn-move {
-                background: white;
-                border: 1px solid #ddd;
-                padding: 8px 15px;
-                border-radius: 6px;
-                font-size: 1.2rem;
-                color: #555;
-            }
-
-            /* Ocultar drag handle original en móvil */
-            .drag-handle-pc { display: none !important; }
-            
-            /* Delete Button Movil */
-            .item-controls { display: none; } /* Ocultamos el control de PC */
-            
-            .btn-delete-mobile {
-                background: #fee;
-                color: #dc3545;
-                border: 1px solid #fcc;
-                padding: 8px 15px;
-                border-radius: 6px;
-                font-weight: bold;
-            }
-        }
-
-        /* Loading Overlay (Fondo oscuro) */
-        #loadingOverlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6); /* Fondo más oscuro para resaltar el popup */
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            backdrop-filter: blur(2px); /* Efecto borroso de fondo */
-        }
-
-        /* Popup Card */
-        .loading-popup {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            text-align: center;
-            width: 90%;
-            max-width: 350px; /* Ancho máximo para PC */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            animation: popupIn 0.3s ease-out;
-        }
-
-        @keyframes popupIn {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
-        .spinner {
-            width: 40px; height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 15px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        #progressBarContainer {
-            width: 100%;
-            background: #eee;
-            height: 8px;
-            border-radius: 4px;
-            margin-top: 15px;
-            overflow: hidden;
-        }
-
-        #progressBar {
-            height: 100%;
-            background: var(--primary);
-            transition: width 0.3s ease;
-        }
-
-        #progressText {
-            margin-top: 8px;
-            font-size: 0.9rem;
-            color: #666;
-            font-weight: 600;
-        }
-
-        #loadingText {
-            margin: 0;
-            font-size: 1.1rem;
-            color: #333;
-        }
-
-        @media (min-width: 901px) {
-            .mobile-controls { display: none; }
-            .item-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; }
-            .item-preview { width: 80px; height: 50px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-            
-            /* Botón de eliminar mejorado en PC */
-            .item-controls button {
-                background: #fff0f0;
-                color: #dc3545;
-                border: 1px solid #ffcccc;
-                width: 36px;
-                height: 36px;
-                border-radius: 50%;
-                font-size: 1.1em;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.2s;
-                cursor: pointer;
-            }
-            .item-controls button:hover {
-                background: #dc3545;
-                color: white;
-                transform: scale(1.1);
-            }
-        }
-
-        /* Status Indicator Animations */
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-left: 8px;
-        }
-
-        .status-online {
-            background-color: #28a745; /* Green */
-            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
-            animation: pulse-green 2s infinite;
-        }
-
-        .status-offline {
-            background-color: #ccc; /* Gray */
-        }
-
-        @keyframes pulse-green {
-            0% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
-            }
-            70% {
-                transform: scale(1);
-                box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
-            }
-            100% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
-            }
-        }
-    </style>
+    <title>Panel de Control · FarmaVid</title>
+    <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay">
-        <div class="spinner"></div>
-        <h3 id="loadingText">Subiendo contenido...</h3>
-        <div id="progressBarContainer" style="width: 80%; max-width: 300px; background: #ddd; height: 10px; border-radius: 5px; margin-top: 10px; overflow: hidden; display: none;">
-            <div id="progressBar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s;"></div>
-        </div>
-        <div id="progressText" style="margin-top: 5px; font-weight: bold; color: #555;"></div>
-    </div>
-
-    <div class="header">
-        <h1>📺 Panel de Control</h1>
-        <div>
-            <span id="currentUser" style="margin-right: 10px; font-weight: bold;"></span>
-            <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
-        </div>
-    </div>
-
-    <div class="grid">
-        <!-- Izquierda: Configuración -->
-        <div>
-            <div class="card">
-                <h2>📡 Pantallas</h2>
-                <div id="screenListContainer">Cargando...</div>
+    <div class="admin">
+        <!-- Barra superior: marca, usuario activo y salida -->
+        <header class="appbar">
+            <div class="appbar__brand">
+                <img class="appbar__logo" src="img/logo.png" alt="FARMAVID">
+                <span class="appbar__title">Panel de Control</span>
             </div>
-
-            <div class="card">
-                <h2>� Plantillas Guardadas</h2>
-                <div style="display:flex; gap:5px; margin-bottom:10px;">
-                    <input type="text" id="newTemplateName" placeholder="Nombre nueva plantilla..." style="flex:1;">
-                    <button class="btn btn-primary btn-sm" onclick="saveCurrentAsTemplate()">Guardar Actual</button>
-                </div>
-                <div id="templateListContainer" style="max-height: 200px; overflow-y: auto;">Cargando...</div>
+            <div class="appbar__actions">
+                <span class="text-muted fs-sm" id="currentUser"></span>
+                <button class="btn btn--danger" type="button" id="logoutBtn">Cerrar sesión</button>
             </div>
+        </header>
 
-            <div class="card">
-                <h2>� Subir Contenido</h2>
-                <form id="uploadForm">
-                    <label>1. Destino:</label>
-                    <select name="targetScreen" id="targetScreenSelect" onchange="loadPlaylist()">
-                        <option value="ALL">🌍 Global (Todas)</option>
-                    </select>
-
-                    <label>2. Archivos (Img/Video):</label>
-                    <input type="file" name="media" accept="image/*,video/*" multiple required lang="es">
-
-                    <label>3. Duración (Imágenes):</label>
-                    <input type="number" name="duration" value="10" min="3">
-                    <small style="color:#666; font-size:0.8em">* Videos usan su propia duración</small>
-
-                    <label>4. Transición (Imágenes):</label>
-                    <select name="transition">
-                        <option value="fade">Suave (Fade)</option>
-                        <option value="slide-left">Deslizar Izq</option>
-                        <option value="slide-right">Deslizar Der</option>
-                        <option value="zoom-in">Zoom In</option>
-                        <option value="none">Ninguno</option>
-                    </select>
-
-                    <button type="submit" class="btn btn-primary">Subir y Agregar</button>
-                </form>
+        <!-- Destino compartido por contenido, playlist y plantillas -->
+        <div class="admin__toolbar">
+            <div class="field">
+                <label class="field__label" for="targetSelect">Destino</label>
+                <select class="select" id="targetSelect">
+                    <option value="ALL">🌍 Global (Todas)</option>
+                </select>
             </div>
         </div>
 
-        <!-- Columna Derecha: Gestor de Playlist -->
-        <div>
-            <!-- Gestión de Usuarios (Añadido) -->
-            <div class="card" id="userManagementSection">
-                <h2>👥 Gestión de Usuarios</h2>
-                <div id="usersList">Cargando...</div>
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
-                <h3>Agregar Usuario</h3>
-                <form id="addUserForm" style="display:flex; gap:5px;">
-                    <input type="text" id="newUsername" placeholder="Usuario" required style="flex:1;">
-                    <input type="password" id="newPassword" placeholder="Contraseña" required style="flex:1;">
-                    <button type="submit" class="btn btn-success btn-sm" style="margin-top:5px; width:auto;">Crear</button>
-                </form>
-            </div>
+        <main class="admin__main">
+            <div class="admin__layout" id="adminLayout" data-active-tab="pantallas">
+                <!-- Columna izquierda: Pantallas + Contenido -->
+                <div class="admin__col">
+                    <section class="card admin-panel admin-panel--screens" aria-labelledby="screensTitle">
+                        <div class="card__header">
+                            <h2 class="card__title" id="screensTitle">📡 Pantallas</h2>
+                        </div>
+                        <div class="card__body">
+                            <div id="screenList" class="stack stack--sm" aria-live="polite"></div>
+                        </div>
+                    </section>
 
-            <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2>📋 Playlist Actual</h2>
-                    <button class="btn btn-sm btn-success" onclick="saveOrder()">💾 Guardar Orden</button>
-                </div>
-                <p id="playlistStatus" style="color:#666; font-size:0.9em; margin-bottom:10px;">
-                    Arrastra los elementos para reordenar y pulsa "Guardar Orden".
-                </p>
-                
-                <div id="playlistContainer">
-                    <p style="text-align:center; color:#999; margin-top:30px;">Selecciona una pantalla para ver su contenido</p>
+                    <section class="card admin-panel admin-panel--upload" aria-labelledby="uploadTitle">
+                        <div class="card__header">
+                            <h2 class="card__title" id="uploadTitle">⬆️ Subir contenido</h2>
+                        </div>
+                        <form id="uploadForm" class="card__body">
+                            <div class="field">
+                                <label class="field__label" for="uploadFiles">Archivos (imagen o video)</label>
+                                <input class="input" id="uploadFiles" name="media" type="file"
+                                    accept="image/*,video/*" multiple required>
+                                <span class="field__hint">Puedes seleccionar varios archivos a la vez.</span>
+                            </div>
+                            <div class="field">
+                                <label class="field__label" for="uploadDuration">Duración de imágenes (segundos)</label>
+                                <input class="input" id="uploadDuration" name="duration" type="number"
+                                    value="10" min="3" step="1" inputmode="numeric">
+                                <span class="field__hint">Los videos usan su propia duración.</span>
+                            </div>
+                            <div class="field">
+                                <label class="field__label" for="uploadTransition">Transición de imágenes</label>
+                                <select class="select" id="uploadTransition" name="transition">
+                                    <option value="fade">Suave (Fade)</option>
+                                    <option value="slide-left">Deslizar izquierda</option>
+                                    <option value="slide-right">Deslizar derecha</option>
+                                    <option value="zoom-in">Zoom In</option>
+                                    <option value="none">Ninguna</option>
+                                </select>
+                            </div>
+                            <button class="btn btn--primary btn--block" type="submit">Subir y agregar</button>
+                        </form>
+                    </section>
                 </div>
 
-                <div style="margin-top: 15px; text-align: right;">
-                    <button class="btn btn-sm btn-danger" onclick="clearPlaylist()">🗑️ Vaciar Todo</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Item Modal -->
-    <div id="editItemModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
-        <div style="background:white; padding:20px; border-radius:10px; width:300px; text-align:center;">
-            <h3>Editar Elemento</h3>
-            <input type="hidden" id="editItemId">
-            
-            <label>Duración (segundos):</label>
-            <input type="number" id="editDuration" placeholder="Default">
-            <small style="color:#666; display:block; margin-bottom:10px;">Solo para imágenes</small>
-
-            <label>Transición:</label>
-            <select id="editTransition">
-                <option value="">(Default)</option>
-                <option value="fade">Fade</option>
-                <option value="slide-left">Slide Left</option>
-                <option value="slide-right">Slide Right</option>
-                <option value="zoom-in">Zoom In</option>
-                <option value="none">Ninguna</option>
-            </select>
-
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button class="btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
-                <button class="btn btn-success" onclick="saveItemEdit()">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const token = localStorage.getItem('admin_token');
-        if (!token) window.location.href = '/login.html';
-        document.getElementById('currentUser').textContent = localStorage.getItem('admin_user');
-
-        const apiHeaders = { 'Authorization': token };
-        let currentPlaylistData = [];
-
-        function logout() {
-            localStorage.removeItem('admin_token');
-            window.location.href = '/login.html';
-        }
-
-        // --- CARGA INICIAL ---
-        async function loadScreens() {
-            try {
-                const res = await fetch('/api/screens', { headers: apiHeaders });
-                if (res.status === 401) return logout();
-                const screens = await res.json();
-                renderScreens(screens);
-                updateSelect(screens);
-            } catch (e) { console.error(e); }
-        }
-
-        function renderScreens(screens) {
-            const container = document.getElementById('screenListContainer');
-            container.innerHTML = '';
-            screens.forEach(s => {
-                const div = document.createElement('div');
-                div.style.padding = '10px 0';
-                div.style.borderBottom = '1px solid #eee';
-                
-                // Icono dispositivo
-                const deviceIcon = s.isApk ? '📱 <small style="color:#666">TV/APK</small>' : '🌐 <small style="color:#666">Web</small>';
-                
-                div.innerHTML = `
-                    <div style="display:flex; flex-direction:column; gap:5px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-weight:bold; display: flex; align-items: center;">
-                                ${s.name} 
-                                <span style="margin-left:8px;">${s.online ? deviceIcon : ''}</span>
-                                <span class="status-indicator ${s.online ? 'status-online' : 'status-offline'}" title="${s.online ? 'En línea' : 'Desconectado'}"></span>
-                            </span>
-                            <div style="display:flex; gap:5px;">
-                                <button class="btn-sm btn-primary" onclick="renameScreen('${s.id}', '${s.name}')" title="Renombrar">✏️</button>
-                                ${s.authorized 
-                                    ? `<button class="btn-sm btn-danger" onclick="toggleAuth('${s.id}', false)">Bloquear</button>` 
-                                    : `<button class="btn-sm btn-success" onclick="toggleAuth('${s.id}', true)">Autorizar</button>
-                                       <button class="btn-sm btn-danger" onclick="deleteScreen('${s.id}')" title="Eliminar Definitivamente">🗑️</button>`
-                                }
+                <!-- Columna derecha: Playlist + Plantillas + Usuarios -->
+                <div class="admin__col">
+                    <section class="card admin-panel admin-panel--playlist" aria-labelledby="playlistTitle">
+                        <div class="card__header">
+                            <h2 class="card__title" id="playlistTitle">📋 Playlist actual</h2>
+                            <div class="row__actions">
+                                <button class="btn btn--success" type="button" id="saveOrderBtn">💾 Guardar orden</button>
                             </div>
                         </div>
-                        <small style="color:#888; font-size:0.75rem;">ID: ${s.id}</small>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        async function deleteScreen(id) {
-            if(!confirm('¿Estás seguro de ELIMINAR esta pantalla? Se borrará de la lista.')) return;
-            try {
-                const res = await fetch(`/api/screens/${id}`, { method: 'DELETE', headers: apiHeaders });
-                if(res.ok) loadScreens();
-                else alert('Error al eliminar');
-            } catch(e) { console.error(e); }
-        }
-
-        async function renameScreen(id, currentName) {
-            const newName = prompt('Nuevo nombre para esta pantalla:', currentName);
-            if (!newName || newName === currentName) return;
-            
-            try {
-                const res = await fetch(`/api/screens/${id}/rename`, {
-                    method: 'POST',
-                    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: newName })
-                });
-                if (res.ok) loadScreens();
-            } catch(e) { console.error(e); }
-        }
-
-        async function toggleAuth(id, authorized) {
-            await fetch(`/api/screens/${id}/authorize`, {
-                method: 'POST',
-                headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ authorized })
-            });
-            loadScreens();
-        }
-
-        function updateSelect(screens) {
-            const select = document.getElementById('targetScreenSelect');
-            const current = select.value;
-            select.innerHTML = '<option value="ALL">🌍 Global (Todas)</option>';
-            screens.filter(s => s.authorized).forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.id;
-                opt.textContent = `🖥️ ${s.name}`;
-                select.appendChild(opt);
-            });
-            if (current) select.value = current;
-            loadPlaylist(); // Cargar playlist del seleccionado
-        }
-
-        // --- GESTIÓN DE PLANTILLAS ---
-        async function loadTemplates() {
-            try {
-                const res = await fetch('/api/templates', { headers: apiHeaders });
-                const templates = await res.json();
-                const container = document.getElementById('templateListContainer');
-                container.innerHTML = '';
-                
-                if(templates.length === 0) {
-                    container.innerHTML = '<small style="color:#999; padding:10px; display:block;">No hay plantillas guardadas</small>';
-                    return;
-                }
-
-                templates.forEach(t => {
-                    const div = document.createElement('div');
-                    div.style.padding = '8px';
-                    div.style.borderBottom = '1px solid #eee';
-                    div.style.display = 'flex';
-                    div.style.justifyContent = 'space-between';
-                    div.style.alignItems = 'center';
-                    div.innerHTML = `
-                        <span>📄 ${t.name}</span>
-                        <div style="display:flex; gap:5px;">
-                            <button class="btn-sm btn-success" onclick="loadTemplate(${t.id})" title="Cargar en Pantalla Actual">Cargar</button>
-                            <button class="btn-sm btn-danger" onclick="deleteTemplate(${t.id})" title="Eliminar Plantilla">🗑️</button>
+                        <div class="card__body">
+                            <p class="text-muted fs-sm" id="playlistHint">
+                                Reordena los elementos (arrastra en escritorio, usa las flechas en móvil) y pulsa “Guardar orden”.
+                            </p>
+                            <div class="playlist" id="playlistContainer" aria-live="polite"></div>
                         </div>
-                    `;
-                    container.appendChild(div);
-                });
-            } catch(e) { console.error(e); }
-        }
-
-        async function saveCurrentAsTemplate() {
-            const name = document.getElementById('newTemplateName').value;
-            const sourceScreen = document.getElementById('targetScreenSelect').value;
-            
-            if(!name) return alert('Escribe un nombre para la plantilla');
-            if(sourceScreen === 'ALL') {
-                // Permitir guardar Global como plantilla
-            }
-            
-            try {
-                const res = await fetch('/api/templates/save-from-screen', {
-                    method: 'POST',
-                    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, sourceScreen })
-                });
-                const data = await res.json();
-                if(res.ok) {
-                    alert('Plantilla guardada');
-                    document.getElementById('newTemplateName').value = '';
-                    loadTemplates();
-                } else {
-                    alert(data.message);
-                }
-            } catch(e) { alert('Error al guardar'); }
-        }
-
-        async function loadTemplate(id) {
-            const targetScreen = document.getElementById('targetScreenSelect').value;
-            if(!confirm(`¿Cargar plantilla en ${targetScreen === 'ALL' ? 'GLOBAL' : 'Pantalla Actual'}? Se reemplazará la lista actual.`)) return;
-
-            try {
-                const res = await fetch(`/api/templates/${id}/load`, {
-                    method: 'POST',
-                    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ targetScreen })
-                });
-                if(res.ok) {
-                    loadPlaylist();
-                    alert('Plantilla cargada exitosamente');
-                } else {
-                    alert('Error al cargar plantilla');
-                }
-            } catch(e) { alert('Error'); }
-        }
-
-        async function deleteTemplate(id) {
-            if(!confirm('¿Eliminar esta plantilla?')) return;
-            await fetch(`/api/templates/${id}`, { method: 'DELETE', headers: apiHeaders });
-            loadTemplates();
-        }
-
-        // --- EDICIÓN DE ITEMS ---
-        let currentEditIndex = -1;
-
-        function openEditModal(index) {
-            currentEditIndex = index;
-            const item = currentPlaylistData[index];
-            
-            document.getElementById('editItemId').value = item.id; // ID de PlaylistItem
-            // Mostrar duración en segundos al usuario (si existe)
-            document.getElementById('editDuration').value = item.duration ? (item.duration / 1000) : ''; 
-            document.getElementById('editTransition').value = item.transition || '';
-            
-            // Mostrar modal
-            const modal = document.getElementById('editItemModal');
-            modal.style.display = 'flex';
-        }
-
-        function closeEditModal() {
-            document.getElementById('editItemModal').style.display = 'none';
-        }
-
-        async function saveItemEdit() {
-            const id = document.getElementById('editItemId').value;
-            const duration = document.getElementById('editDuration').value;
-            const transition = document.getElementById('editTransition').value;
-            
-            try {
-                const res = await fetch(`/api/playlist-item/${id}`, {
-                    method: 'PUT',
-                    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        duration: duration ? parseInt(duration) * 1000 : null, // Convertir a milisegundos
-                        transition: transition || null 
-                    })
-                });
-                
-                if(res.ok) {
-                    closeEditModal();
-                    loadPlaylist(); // Recargar para ver cambios
-                } else {
-                    alert('Error al actualizar');
-                }
-            } catch(e) { alert('Error'); }
-        }
-
-        // --- GESTIÓN DE USUARIOS ---
-        async function loadUsers() {
-            const currentUser = localStorage.getItem('admin_user');
-            
-            // Si no es 'admin', ocultar toda la sección de gestión de usuarios
-            if (currentUser !== 'admin') {
-                document.getElementById('userManagementSection').style.display = 'none';
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/users', { headers: apiHeaders });
-                const users = await res.json();
-                const list = document.getElementById('usersList');
-                list.innerHTML = '';
-                
-                users.forEach(u => {
-                    const div = document.createElement('div');
-                    div.style.display = 'flex';
-                    div.style.justifyContent = 'space-between';
-                    div.style.padding = '5px 0';
-                    div.style.borderBottom = '1px solid #eee';
-                    
-                    div.innerHTML = `
-                        <span>👤 ${u.username}</span>
-                        <div>
-                            <button class="btn-sm btn-primary" onclick="changePass(${u.id})">🔑</button>
-                            ${u.username !== 'admin' ? `<button class="btn-sm btn-danger" onclick="deleteUser(${u.id})">🗑️</button>` : ''}
+                        <div class="card__footer">
+                            <button class="btn btn--danger" type="button" id="clearPlaylistBtn">🗑️ Vaciar todo</button>
                         </div>
-                    `;
-                    list.appendChild(div);
-                });
-            } catch(e) { console.error(e); }
-        }
+                    </section>
 
-        document.getElementById('addUserForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('newUsername').value;
-            const password = document.getElementById('newPassword').value;
-            
-            const res = await fetch('/api/users', {
-                method: 'POST',
-                headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            if(res.ok) {
-                e.target.reset();
-                loadUsers();
-                alert('Usuario creado');
-            } else {
-                alert((await res.json()).message);
-            }
-        });
-
-        async function deleteUser(id) {
-            if(!confirm('¿Eliminar usuario?')) return;
-            await fetch(`/api/users/${id}`, { method: 'DELETE', headers: apiHeaders });
-            loadUsers();
-        }
-
-        async function changePass(id) {
-            const newPass = prompt('Nueva contraseña:');
-            if(!newPass) return;
-            await fetch(`/api/users/${id}/password`, {
-                method: 'PUT',
-                headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: newPass })
-            });
-            alert('Contraseña actualizada');
-        }
-
-        // --- GESTIÓN DE USUARIOS ---
-        async function loadPlaylist() {
-            const target = document.getElementById('targetScreenSelect').value;
-            const container = document.getElementById('playlistContainer');
-            container.innerHTML = '<p>Cargando...</p>';
-            
-            try {
-                const res = await fetch(`/api/playlist/${target}`, { headers: apiHeaders });
-                currentPlaylistData = await res.json();
-                renderPlaylist();
-            } catch(e) { container.innerHTML = 'Error al cargar'; }
-        }
-
-        function renderPlaylist() {
-            const container = document.getElementById('playlistContainer');
-            container.innerHTML = '';
-            
-            if (currentPlaylistData.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#999;">Lista vacía</p>';
-                return;
-            }
-
-            currentPlaylistData.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'playlist-item';
-                div.draggable = true;
-                div.dataset.index = index;
-                
-                const preview = item.type === 'video' 
-                    ? `<video src="${item.url}" class="item-preview" muted></video>`
-                    : `<img src="${item.url}" class="item-preview">`;
-
-                const badge = item.type === 'video' 
-                    ? `<span class="type-badge badge-video">VIDEO</span>` 
-                    : `<span class="type-badge badge-image">IMG (${item.duration/1000}s)</span>`;
-
-                // Detectar si es móvil (ancho menor a 900px) para cambiar layout HTML si es necesario, 
-                // pero mejor usamos CSS Grid puro.
-                // En este caso, simplificamos el HTML y dejamos que CSS haga el trabajo sucio.
-                
-                div.innerHTML = `
-                    <div class="item-left">
-                        <span class="drag-handle-pc" style="color:#ccc; cursor:move; font-size:1.2em; margin-right: 10px;">☰</span>
-                        ${preview}
-                        <div class="item-info">
-                            <div class="item-name" title="${item.name || ''}">${item.name || 'Sin nombre'}</div>
-                            <div>${badge}</div>
+                    <section class="card admin-panel admin-panel--templates" aria-labelledby="templatesTitle">
+                        <div class="card__header">
+                            <h2 class="card__title" id="templatesTitle">📄 Plantillas guardadas</h2>
                         </div>
-                    </div>
-                    
-                    <!-- Controles PC -->
-                    <div class="item-controls" style="display:flex; gap:5px;">
-                        <button class="btn-sm btn-primary" onclick="openEditModal(${index})" title="Editar" style="background:#e3f2fd; color:#007bff; border-color:#b3d7ff;">✎</button>
-                        <button class="btn-sm btn-danger" onclick="removeItem(${index})" title="Eliminar">✕</button>
-                    </div>
-
-                    <!-- Controles Móvil (Botones subir/bajar explícitos) -->
-                    <div class="mobile-controls">
-                        <div class="order-buttons">
-                            <button class="btn-move" onclick="moveItem(${index}, -1)" ${index === 0 ? 'disabled style="opacity:0.3"' : ''}>⬆</button>
-                            <button class="btn-move" onclick="moveItem(${index}, 1)" ${index === currentPlaylistData.length - 1 ? 'disabled style="opacity:0.3"' : ''}>⬇</button>
+                        <div class="card__body">
+                            <form id="templateForm" class="stack stack--sm">
+                                <div class="field">
+                                    <label class="field__label" for="templateName">Nombre de la nueva plantilla</label>
+                                    <div class="field-row">
+                                        <input class="input" id="templateName" type="text"
+                                            placeholder="Ej: Promos de verano" required>
+                                        <button class="btn btn--primary" type="submit">Guardar actual</button>
+                                    </div>
+                                </div>
+                            </form>
+                            <div id="templateList" class="stack stack--sm" aria-live="polite"></div>
                         </div>
-                        <div style="display:flex; gap:5px;">
-                            <button class="btn-sm btn-primary" onclick="openEditModal(${index})" style="background:#e3f2fd; color:#007bff; border-color:#b3d7ff; padding:8px 15px; border-radius:6px;">✎</button>
-                            <button class="btn-delete-mobile" onclick="removeItem(${index})">Eliminar</button>
+                    </section>
+
+                    <section class="card admin-panel admin-panel--users" id="usersPanel" aria-labelledby="usersTitle">
+                        <div class="card__header">
+                            <h2 class="card__title" id="usersTitle">👥 Gestión de usuarios</h2>
                         </div>
-                    </div>
-                `;
-                
-                // Eventos Drag & Drop
-                div.addEventListener('dragstart', handleDragStart);
-                div.addEventListener('dragover', handleDragOver);
-                div.addEventListener('drop', handleDrop);
-                div.addEventListener('dragenter', handleDragEnter);
-                div.addEventListener('dragleave', handleDragLeave);
-                
-                container.appendChild(div);
-            });
-        }
+                        <div class="card__body">
+                            <div id="userList" class="stack stack--sm" aria-live="polite"></div>
+                            <form id="addUserForm" class="stack stack--sm">
+                                <div class="field">
+                                    <label class="field__label" for="newUsername">Usuario</label>
+                                    <input class="input" id="newUsername" type="text"
+                                        autocomplete="off" autocapitalize="off" spellcheck="false" required>
+                                </div>
+                                <div class="field">
+                                    <label class="field__label" for="newPassword">Contraseña</label>
+                                    <input class="input" id="newPassword" type="password"
+                                        autocomplete="new-password" required>
+                                </div>
+                                <button class="btn btn--success" type="submit">Crear usuario</button>
+                            </form>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
 
-        // --- DRAG & DROP LOGIC ---
-        let dragSrcEl = null;
+        <!-- Tab bar movil: visible solo por debajo de 1024px -->
+        <nav class="tabbar tabbar--admin" id="tabbar" aria-label="Secciones del panel">
+            <button class="tabbar__item tabbar__item--active" type="button" data-tab="pantallas"
+                aria-current="true">
+                <span class="tabbar__icon" aria-hidden="true">📡</span>
+                <span>Pantallas</span>
+            </button>
+            <button class="tabbar__item" type="button" data-tab="contenido">
+                <span class="tabbar__icon" aria-hidden="true">⬆️</span>
+                <span>Contenido</span>
+            </button>
+            <button class="tabbar__item" type="button" data-tab="playlist">
+                <span class="tabbar__icon" aria-hidden="true">📋</span>
+                <span>Playlist</span>
+            </button>
+            <button class="tabbar__item" type="button" data-tab="usuarios">
+                <span class="tabbar__icon" aria-hidden="true">👥</span>
+                <span>Usuarios</span>
+            </button>
+        </nav>
+    </div>
 
-        function handleDragStart(e) {
-            dragSrcEl = this;
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', this.innerHTML);
-            this.classList.add('dragging');
-        }
+    <!-- Overlay de subida con progreso -->
+    <div class="overlay is-hidden" id="uploadOverlay" role="alertdialog" aria-modal="true"
+        aria-labelledby="uploadOverlayTitle">
+        <div class="overlay__panel">
+            <div class="spinner" aria-hidden="true"></div>
+            <strong id="uploadOverlayTitle">Subiendo contenido…</strong>
+            <div class="progress" id="uploadProgress" role="progressbar"
+                aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="progress__bar progress__bar--value" id="uploadProgressBar"></div>
+            </div>
+            <span class="text-muted" id="uploadProgressText">0%</span>
+        </div>
+    </div>
 
-        function handleDragOver(e) {
-            if (e.preventDefault) e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            return false;
-        }
+    <!-- Pila de notificaciones -->
+    <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
 
-        function handleDragEnter(e) { this.classList.add('over'); }
-        function handleDragLeave(e) { this.classList.remove('over'); }
-
-        function handleDrop(e) {
-            if (e.stopPropagation) e.stopPropagation();
-            if (dragSrcEl !== this) {
-                // Intercambiar datos en array
-                const fromIndex = parseInt(dragSrcEl.dataset.index);
-                const toIndex = parseInt(this.dataset.index);
-                
-                // Mover elemento en array
-                const item = currentPlaylistData.splice(fromIndex, 1)[0];
-                currentPlaylistData.splice(toIndex, 0, item);
-                
-                renderPlaylist(); // Re-renderizar todo
-            }
-            return false;
-        }
-
-        function removeItem(index) {
-            if(!confirm('¿Borrar elemento?')) return;
-            currentPlaylistData.splice(index, 1);
-            renderPlaylist();
-            
-            // ¡IMPORTANTE! El usuario reporta que al refrescar el video vuelve a aparecer.
-            // Esto es porque removeItem solo lo borraba del array local 'currentPlaylistData'
-            // pero NO lo guardaba en la base de datos.
-            saveOrder(); // Guardar cambios en la BD inmediatamente tras eliminar
-        }
-
-        // Función para mover items con botones (Móvil)
-        function moveItem(index, direction) {
-            const newIndex = index + direction;
-            if (newIndex < 0 || newIndex >= currentPlaylistData.length) return;
-            
-            // Swap
-            const temp = currentPlaylistData[index];
-            currentPlaylistData[index] = currentPlaylistData[newIndex];
-            currentPlaylistData[newIndex] = temp;
-            
-            renderPlaylist();
-        }
-
-        async function saveOrder() {
-            const target = document.getElementById('targetScreenSelect').value;
-            try {
-                const res = await fetch('/api/playlist/update', {
-                    method: 'POST',
-                    headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ targetScreen: target, newPlaylist: currentPlaylistData })
-                });
-                const data = await res.json();
-                alert(data.message);
-            } catch(e) { alert('Error al guardar'); }
-        }
-
-        async function clearPlaylist() {
-            if(!confirm('¿Vaciar TODA la lista?')) return;
-            const target = document.getElementById('targetScreenSelect').value;
-            await fetch('/api/clear', {
-                method: 'POST',
-                headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ targetScreen: target })
-            });
-            loadPlaylist();
-        }
-
-        // --- UPLOAD ---
-        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            const overlay = document.getElementById('loadingOverlay');
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            const progressBarContainer = document.getElementById('progressBarContainer');
-            
-            // Validar que hay archivos
-            const fileInput = e.target.querySelector('input[name="media"]');
-            if (fileInput && fileInput.files.length === 0) {
-                alert('Por favor selecciona al menos un archivo.');
-                return;
-            }
-
-            if (overlay) {
-                overlay.style.display = 'flex';
-                progressBarContainer.style.display = 'block';
-                progressBar.style.width = '0%';
-                progressText.innerText = '0%';
-            }
-
-            // Usar XMLHttpRequest para tener progreso de subida (fetch no soporta upload progress nativamente fácil)
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/api/publish');
-            // Headers
-            xhr.setRequestHeader('Authorization', localStorage.getItem('admin_token'));
-            
-            xhr.upload.onprogress = (event) => {
-                if (event.lengthComputable) {
-                    const percentComplete = Math.round((event.loaded / event.total) * 100);
-                    progressBar.style.width = percentComplete + '%';
-                    progressText.innerText = percentComplete + '%';
-                }
-            };
-
-            xhr.onload = () => {
-                if (xhr.status === 200) {
-                    const data = JSON.parse(xhr.responseText);
-                    alert(data.message || 'Contenido publicado exitosamente');
-                    e.target.reset();
-                    loadPlaylist();
-                } else {
-                    let msg = 'Error desconocido';
-                    try { msg = JSON.parse(xhr.responseText).message; } catch(e){}
-                    alert('Error: ' + msg);
-                }
-                overlay.style.display = 'none';
-            };
-
-            xhr.onerror = () => {
-                alert('Error de conexión o subida fallida.');
-                overlay.style.display = 'none';
-            };
-
-            xhr.send(formData);
-        });
-
-        // Init
-        loadScreens();
-        loadUsers(); // Cargar usuarios al inicio
-        loadTemplates(); // Cargar plantillas
-        setInterval(loadScreens, 10000); // Refrescar estado pantallas
-    </script>
+    <script src="js/ui.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/admin.js"></script>
 </body>
 </html>

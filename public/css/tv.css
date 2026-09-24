@@ -1,0 +1,283 @@
+/* =========================================================================
+   FARMAVID · Superficie del reproductor de TV (tv.html)
+   Esta hoja tiene dos capas bien separadas:
+
+     1. Motor visual del reproductor (doble buffer + transiciones): movido
+        VERBATIM desde el bloque <style> de tv.html. NO es una decision de
+        diseno, es comportamiento del motor de reproduccion y se conserva
+        intacto (incluido su unico !important).
+     2. Capa de estado (conexion, autorizacion, sincronizacion) y consola
+        de depuracion, restilizadas con los tokens de app.css.
+
+   Se carga DESPUES de app.css: aqui se aisla la TV como superficie negra,
+   a pantalla completa y sin scroll, ignorando el fondo neutro del panel.
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   1. Motor visual del reproductor (verbatim desde tv.html)
+   ------------------------------------------------------------------------- */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+
+        .slide-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .slide-item {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: contain; /* Ajuste para ver todo el contenido */
+            opacity: 0;
+            transition: opacity 1s ease;
+            z-index: 0;
+            background: black; /* Fondo negro para videos con aspect ratio distinto */
+        }
+
+        .slide-item.active { opacity: 1; z-index: 2; }
+
+        /* Efectos */
+        .effect-fade { transition: opacity 1.5s ease-in-out; }
+
+        .effect-slide-left { transform: translateX(100%); transition: transform 0.8s ease-out; opacity: 1; }
+        .effect-slide-left.active { transform: translateX(0); }
+        .effect-slide-left.exit { transform: translateX(-100%); z-index: 1; }
+
+        .effect-slide-right { transform: translateX(-100%); transition: transform 0.8s ease-out; opacity: 1; }
+        .effect-slide-right.active { transform: translateX(0); }
+        .effect-slide-right.exit { transform: translateX(100%); z-index: 1; }
+
+        .effect-zoom-in { transform: scale(0.8); opacity: 0; transition: all 1s ease; }
+        .effect-zoom-in.active { transform: scale(1); opacity: 1; }
+
+        /* Conservado por el motor de transiciones: NO es una decision de
+           diseno. El reproductor depende de que este efecto no transicione,
+           por eso el !important se mantiene tal cual. */
+        .effect-none { transition: none !important; }
+
+        /* UI Overlay */
+        /* (Legado): la seccion 3 de este archivo reemplaza estas reglas. */
+        #statusMsg {
+            color: white; font-family: 'Segoe UI', sans-serif; text-align: center;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80%; z-index: 5;
+        }
+        #fsBtn {
+            position: absolute; bottom: 20px; right: 20px; padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2); color: white;
+            border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 5px;
+            cursor: pointer; z-index: 100; transition: opacity 0.3s;
+        }
+
+/* -------------------------------------------------------------------------
+   2. Superficie del reproductor
+   app.css pinta el fondo neutro del panel y margenes en el body. Como esta
+   hoja carga ultima, aqui se gana: pantalla negra, sin margenes, sin scroll
+   y sin rebote. La TV nunca scrollea.
+   ------------------------------------------------------------------------- */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: #000;
+}
+
+body {
+    color: var(--text-inverse);
+    font-family: var(--font);
+}
+
+/* -------------------------------------------------------------------------
+   3. Capa de estado del reproductor
+   Reutiliza .tv-status de app.css (superficie oscura #0A0C10). Sobre esta
+   superficie el verde SI es legible como texto (13.3:1) y el violeta NO
+   (3.3:1), por eso los estados usan blanco, verde y variantes claras de
+   ambar/rojo. Toda la visibilidad y el estado se resuelven por clase.
+   ------------------------------------------------------------------------- */
+#statusMsg {
+    /* Paleta de estados sobre #0A0C10:
+       verde #20EE03 = 13.3:1 | ambar = 12.2:1 | rojo claro = 7.7:1. */
+    --tv-warn: #FFC24B;
+    --tv-danger: #FF7A70;
+
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    transform: none;
+    z-index: 5;
+    gap: clamp(var(--sp-4), 2.5vh, var(--sp-6));
+    padding: clamp(var(--sp-5), 4vh, var(--sp-7)) var(--sp-4);
+}
+
+/* El overlay se oculta por clase cuando el contenido empieza a reproducir. */
+.tv-status.is-hidden {
+    display: none;
+}
+
+/* --- Tipografia pensada para leerse desde varios metros de distancia --- */
+.tv-status__title {
+    font-size: clamp(2.25rem, 5.5vw, 4.5rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: .01em;
+}
+
+.tv-status__desc {
+    font-size: clamp(1rem, 1.75vw, 1.75rem);
+    line-height: 1.4;
+    max-width: 44ch;
+    white-space: pre-line;
+}
+
+.tv-status__logo {
+    width: clamp(72px, 8vw, 128px);
+}
+
+/* --- Estados: color del titulo --- */
+.tv-status.is-connecting .tv-status__title {
+    color: rgba(255, 255, 255, .85);
+}
+
+.tv-status.is-connected .tv-status__title,
+.tv-status.is-syncing .tv-status__title {
+    color: var(--color-accent);
+}
+
+.tv-status.is-disconnected .tv-status__title {
+    color: var(--tv-warn);
+}
+
+.tv-status.is-error .tv-status__title,
+.tv-status.is-denied .tv-status__title {
+    color: var(--tv-danger);
+}
+
+.tv-status.is-waiting .tv-status__title {
+    color: var(--text-inverse);
+}
+
+.tv-status.is-empty .tv-status__title {
+    color: var(--tv-warn);
+}
+
+/* Pulso suave solo en estados en progreso (app.css ya respeta
+   prefers-reduced-motion para toda animacion). */
+.tv-status.is-connecting .tv-status__title,
+.tv-status.is-syncing .tv-status__title {
+    animation: tv-status-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes tv-status-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .55; }
+}
+
+/* --- ID del dispositivo: el dato que el operador lee desde el otro lado
+       de la sala para autorizar la pantalla. Grande e inequivoco. --- */
+#statusMsg .tv-status__id {
+    gap: var(--sp-1);
+    padding: var(--sp-3) clamp(var(--sp-4), 3vw, var(--sp-6));
+    border-width: 2px;
+    font-size: clamp(1.75rem, 4vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: .1em;
+}
+
+#statusMsg .tv-status__id-label {
+    font-size: clamp(.7rem, 1.1vw, 1rem);
+}
+
+/* -------------------------------------------------------------------------
+   4. Boton de pantalla completa
+   Icono SVG en linea (sin fuentes de iconos ni assets externos). Discreto:
+   opacidad baja en reposo y se revela al pasar el puntero o al enfocarlo.
+   Los toggles de visibilidad por plataforma nativa siguen en el JS.
+   ------------------------------------------------------------------------- */
+#fsBtn {
+    position: absolute;
+    right: clamp(var(--sp-3), 1.5vw, var(--sp-5));
+    bottom: clamp(var(--sp-3), 1.5vw, var(--sp-5));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, .06);
+    color: rgba(255, 255, 255, .8);
+    opacity: .35;
+    z-index: 100;
+    transition: opacity .3s ease, background .3s ease, color .3s ease;
+}
+
+#fsBtn:hover,
+#fsBtn:focus-visible {
+    opacity: 1;
+    background: rgba(255, 255, 255, .14);
+    color: #FFFFFF;
+}
+
+#fsBtn svg {
+    display: block;
+    width: 22px;
+    height: 22px;
+}
+
+/* -------------------------------------------------------------------------
+   5. Consola de depuracion
+   Overlay de desarrollo, oculto por defecto y visible solo cuando el JS le
+   agrega .is-visible. Queda abajo a la izquierda y no intercepta clicks.
+   ------------------------------------------------------------------------- */
+.tv-debug {
+    position: fixed;
+    bottom: var(--sp-1);
+    left: var(--sp-1);
+    width: 40%;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: var(--sp-1) var(--sp-2);
+    background: rgba(0, 0, 0, .55);
+    color: var(--color-accent);
+    font-family: ui-monospace, Consolas, 'Courier New', monospace;
+    font-size: var(--fs-xs);
+    line-height: 1.5;
+    z-index: 1000;
+    pointer-events: none;
+    display: none;
+}
+
+.tv-debug.is-visible {
+    display: block;
+}
+
+/* -------------------------------------------------------------------------
+   6. Ajustes por breakpoint (480 / 768)
+   ------------------------------------------------------------------------- */
+@media (min-width: 480px) {
+    #fsBtn {
+        width: 52px;
+        height: 52px;
+    }
+}
+
+@media (min-width: 768px) {
+    #statusMsg {
+        padding: var(--sp-7) var(--sp-6);
+    }
+
+    #fsBtn {
+        width: 56px;
+        height: 56px;
+    }
+
+    #fsBtn svg {
+        width: 26px;
+        height: 26px;
+    }
+}

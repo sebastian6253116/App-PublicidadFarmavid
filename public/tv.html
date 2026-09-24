@@ -2,64 +2,33 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>TV Player</title>
-    <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-        
-        .slide-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        .slide-item {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: contain; /* Ajuste para ver todo el contenido */
-            opacity: 0;
-            transition: opacity 1s ease;
-            z-index: 0;
-            background: black; /* Fondo negro para videos con aspect ratio distinto */
-        }
-
-        .slide-item.active { opacity: 1; z-index: 2; }
-
-        /* Efectos */
-        .effect-fade { transition: opacity 1.5s ease-in-out; }
-        
-        .effect-slide-left { transform: translateX(100%); transition: transform 0.8s ease-out; opacity: 1; }
-        .effect-slide-left.active { transform: translateX(0); }
-        .effect-slide-left.exit { transform: translateX(-100%); z-index: 1; }
-
-        .effect-slide-right { transform: translateX(-100%); transition: transform 0.8s ease-out; opacity: 1; }
-        .effect-slide-right.active { transform: translateX(0); }
-        .effect-slide-right.exit { transform: translateX(100%); z-index: 1; }
-
-        .effect-zoom-in { transform: scale(0.8); opacity: 0; transition: all 1s ease; }
-        .effect-zoom-in.active { transform: scale(1); opacity: 1; }
-
-        .effect-none { transition: none !important; }
-
-        /* UI Overlay */
-        #statusMsg {
-            color: white; font-family: 'Segoe UI', sans-serif; text-align: center;
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80%; z-index: 5;
-        }
-        #fsBtn {
-            position: absolute; bottom: 20px; right: 20px; padding: 10px 20px;
-            background: rgba(255, 255, 255, 0.2); color: white;
-            border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 5px;
-            cursor: pointer; z-index: 100; transition: opacity 0.3s;
-        }
-    </style>
+    <!-- app.css primero (tokens y sistema de diseno). tv.css ultimo: aisla la TV -->
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/tv.css">
 </head>
 <body>
-    <button id="fsBtn">⛶</button>
+    <!-- Pantalla completa: SVG en linea, sin fuentes de iconos -->
+    <button id="fsBtn" type="button" aria-label="Pantalla completa">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
+            <path d="M16 3h3a2 2 0 0 1 2 2v3"></path>
+            <path d="M8 21H5a2 2 0 0 1-2-2v-3"></path>
+            <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+        </svg>
+    </button>
 
-    <div id="statusMsg">
-        <h1 id="statusTitle">Conectando...</h1>
-        <p id="statusDesc">...</p>
+    <!-- Capa de estado del reproductor (conexion y autorizacion) -->
+    <div id="statusMsg" class="tv-status is-connecting">
+        <img class="tv-status__logo" src="img/imagotipo.png" alt="FarmaVid">
+        <h1 id="statusTitle" class="tv-status__title">Conectando...</h1>
+        <p id="statusDesc" class="tv-status__desc">...</p>
+        <!-- ID del dispositivo: el operador lo lee desde lejos para autorizar -->
+        <div id="statusId" class="tv-status__id is-hidden">
+            <span class="tv-status__id-label">ID del dispositivo</span>
+            <span id="statusIdValue"></span>
+        </div>
     </div>
 
     <!-- Contenedor Doble Buffer Generico (divs que pueden tener img o video dentro) -->
@@ -70,7 +39,8 @@
         <div id="slot1" class="slide-item"></div>
     </div>
 
-    <div id="debugConsole" style="position:fixed; bottom:5px; left:5px; width:40%; max-height:200px; overflow-y:auto; color:lime; font-size:10px; background:rgba(0,0,0,0.5); font-family:monospace; z-index:1000; pointer-events:none; display:none;"></div>
+    <!-- Consola de depuracion: oculta por defecto, el JS la muestra con .is-visible -->
+    <div id="debugConsole" class="tv-debug"></div>
 
     <script src="js/socket.io.js" onerror="console.error('Failed to load socket.io.js'); if(document.getElementById('debugConsole')) document.getElementById('debugConsole').innerHTML += '<div>[ERROR] Failed to load js/socket.io.js</div>'"></script>
     <script>
@@ -93,6 +63,38 @@
         const statusTitle = document.getElementById('statusTitle');
         const statusDesc = document.getElementById('statusDesc');
         const statusMsg = document.getElementById('statusMsg');
+        const statusId = document.getElementById('statusId');
+        const statusIdValue = document.getElementById('statusIdValue');
+
+        // Capa de estado: unico punto de entrada para pintar el estado.
+        // state: connecting | connected | disconnected | error | denied | waiting | syncing | empty
+        //
+        // OJO: setStatus NO cambia la visibilidad de la capa. Se muestra con
+        // showStatus() y se oculta con hideStatus(). Si setStatus mostrara siempre
+        // la capa, un corte de red momentaneo taparia el contenido que ya se esta
+        // reproduciendo: el original mantenia la capa oculta a proposito para que
+        // la TV siguiera pasando publicidad con lo que tuviera cacheado.
+        function setStatus(state, title, desc, deviceId) {
+            if (!statusMsg) return;
+            var estabaOculto = statusMsg.classList.contains('is-hidden');
+            statusMsg.className = 'tv-status is-' + state;
+            if (estabaOculto) statusMsg.classList.add('is-hidden');
+            if (statusTitle && title !== undefined) statusTitle.innerText = title;
+            if (statusDesc && desc !== undefined) statusDesc.innerText = desc;
+            if (statusIdValue && deviceId !== undefined) statusIdValue.innerText = deviceId;
+            if (statusId) statusId.classList.toggle('is-hidden', deviceId === undefined);
+        }
+
+        // Muestra la capa de estado. Equivale al statusMsg.style.display = 'block' original.
+        function showStatus() {
+            if (statusMsg) statusMsg.classList.remove('is-hidden');
+        }
+
+        // Oculta la capa de estado. Solo como interlock de reproduccion:
+        // misma posicion y condiciones que el display = 'none' original.
+        function hideStatus() {
+            if (statusMsg) statusMsg.classList.add('is-hidden');
+        }
 
         // Variables Globales
         let currentPlaylist = [];
@@ -110,7 +112,7 @@
         // Si es nativo, usar URL absoluta. Si es web, usar relativa.
         const SERVER_URL = Capacitor.isNativePlatform() ? 'https://tv.farmavid.com.ve' : '';
         
-        if (statusDesc) statusDesc.innerText = "Intentando conectar a: " + (SERVER_URL || 'Localhost');
+        setStatus('connecting', 'Conectando...', 'Intentando conectar a: ' + (SERVER_URL || 'Localhost'));
         log("Iniciando Socket.io a: " + SERVER_URL);
         
         const socket = io(SERVER_URL, {
@@ -126,18 +128,14 @@
             console.error('Connection Error:', err);
             
             // Si hay error, mostrar consola para ver qué pasa
-            if (debugConsole) debugConsole.style.display = 'block';
+            if (debugConsole) debugConsole.classList.add('is-visible');
 
-            if (statusTitle) {
-                statusTitle.innerText = "Error de Conexión";
-                statusTitle.style.color = "#ff6b6b";
-            }
-            if (statusDesc) statusDesc.innerText = `No se pudo conectar al servidor.\n${err.message}`;
+            setStatus('error', 'Error de Conexión', `No se pudo conectar al servidor.\n${err.message}`);
         });
 
         socket.on('disconnect', (reason) => {
             log('Desconectado: ' + reason);
-            statusTitle.innerText = "Desconectado";
+            setStatus('disconnected', 'Desconectado');
         });
         
         // GESTIÓN DE ID DE PANTALLA PERSISTENTE (ID ESTABLE)
@@ -184,8 +182,7 @@
         // Socket
         socket.on('connect', () => {
             log('Socket conectado!');
-            statusTitle.innerText = "Conectado";
-            statusDesc.innerText = `ID: ${myScreenId}`;
+            setStatus('connected', 'Conectado', `ID: ${myScreenId}`);
             
             const isApk = Capacitor.isNativePlatform(); // Usar API real
             socket.emit('register_screen', { screenId: myScreenId, isApk });
@@ -197,7 +194,7 @@
             
             // Controlar visibilidad de consola: Solo visible si NO está autorizado
             if (debugConsole) {
-                debugConsole.style.display = isAuthorized ? 'none' : 'block';
+                debugConsole.classList.toggle('is-visible', !isAuthorized);
             }
 
             if (isAuthorized) {
@@ -205,9 +202,9 @@
                 localStorage.setItem('tv_device_id', myScreenId);
                 currentIdIsSaved = true;
 
-                statusTitle.innerText = "Esperando contenido...";
+                setStatus('waiting', 'Esperando contenido...');
                 resetSlots();
-                statusMsg.style.display = 'block';
+                showStatus();
             } else {
                 // NO AUTORIZADA
                 // El ID se mantiene persistido AUNQUE no esté autorizada.
@@ -216,9 +213,8 @@
 
                 clearTimeout(rotationTimer);
                 resetSlots();
-                statusMsg.style.display = 'block';
-                statusTitle.innerText = "⛔ No Autorizada";
-                statusTitle.style.color = "#ff6b6b";
+                setStatus('denied', 'No Autorizada', 'Esta pantalla todavía no fue autorizada. Ingresa el siguiente código en el panel de administración.', myScreenId);
+                showStatus();
             }
         });
 
@@ -239,17 +235,16 @@
 
             // --- DOWNLOAD MANAGER (Offline Mode) ---
             if (Capacitor.isNativePlatform()) {
-                statusMsg.style.display = 'block';
-                statusTitle.innerText = "Sincronizando...";
-                statusDesc.innerText = "Verificando archivos...";
+                setStatus('syncing', 'Sincronizando...', 'Verificando archivos...');
+                showStatus();
                 
                 try {
                     // Descargar contenido
                     newPlaylist = await syncContent(newPlaylist);
-                    statusMsg.style.display = 'none';
+                    hideStatus();
                 } catch (e) {
                     console.error("Error sync:", e);
-                    statusDesc.innerText = "Error descargando contenido";
+                    setStatus('error', 'Error descargando contenido', 'Se reproducirá el contenido disponible.');
                     // Intentar reproducir con lo que haya
                 }
             }
@@ -306,7 +301,7 @@
                     });
                 } catch (e) {
                     // No existe, descargar
-                    statusDesc.innerText = `Descargando ${i + 1}/${playlist.length}`;
+                    setStatus('syncing', 'Sincronizando...', `Descargando ${i + 1}/${playlist.length}`);
                     log(`Descargando: ${item.url}`);
                     
                     try {
@@ -385,13 +380,12 @@
 
             if (!currentPlaylist || currentPlaylist.length === 0) {
                 resetSlots();
-                statusMsg.style.display = 'block';
-                statusTitle.innerText = "Playlist Vacía";
-                statusTitle.style.color = "white";
+                setStatus('empty', 'Playlist Vacía');
+                showStatus();
                 return;
             }
 
-            statusMsg.style.display = 'none';
+            hideStatus();
             showCurrentItem();
         }
 

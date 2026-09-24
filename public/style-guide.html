@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmaVid · Guía de Estilos</title>
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="sg-page">
+
+    <header class="sg-header">
+        <img class="sg-header__logo" src="img/logo.png" alt="FARMAVID">
+        <div>
+            <h1 class="sg-section__title">Guía de Estilos</h1>
+            <p class="sg-note">Sistema de diseño base: tokens + componentes reutilizables de <code>css/app.css</code>.</p>
+        </div>
+    </header>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Paleta</h2>
+        <p class="sg-note">Cada color trae su HEX y su nota de contraste. El violeta hace el trabajo pesado; el verde es solo acento.</p>
+
+        <div class="sg-swatches">
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-green"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#20EE03</div>
+                    <div>Verde FarmaVid</div>
+                    <div class="sg-swatch__note">Texto en blanco: 1.6:1 — NUNCA como texto sobre claro. Relleno con texto oscuro u sobre fondo oscuro (13.3:1).</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-green-dark"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#16B302</div>
+                    <div>Verde oscuro</div>
+                    <div class="sg-swatch__note">Hover del acento.</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-green-ink"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#0A5C01</div>
+                    <div>Verde tinta</div>
+                    <div class="sg-swatch__note">Texto/íconos verdes legibles sobre fondos claros.</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-purple"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#8E00FF</div>
+                    <div>Violeta FarmaVid</div>
+                    <div class="sg-swatch__note">Texto en blanco: 5.8:1 — acciones primarias, links, foco y estado activo.</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-purple-dark"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#6E00C8</div>
+                    <div>Violeta oscuro</div>
+                    <div class="sg-swatch__note">Hover del primario.</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-purple-soft"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#F5EBFF</div>
+                    <div>Violeta suave</div>
+                    <div class="sg-swatch__note">Fondo de estados activos y hover.</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-success"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#16A34A</div>
+                    <div>Success</div>
+                    <div class="sg-swatch__note">Confirmaciones y estados correctos.</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-danger"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#DC2626</div>
+                    <div>Danger</div>
+                    <div class="sg-swatch__note">Errores y acciones destructivas.</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-warning"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#D97706</div>
+                    <div>Warning</div>
+                    <div class="sg-swatch__note">Avisos que requieren atención.</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-info"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#0284C7</div>
+                    <div>Info</div>
+                    <div class="sg-swatch__note">Mensajes informativos.</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-surface"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#FFFFFF</div>
+                    <div>Surface</div>
+                    <div class="sg-swatch__note">Fondo de tarjetas y controles.</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-surface-2"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#F9FAFB</div>
+                    <div>Surface 2</div>
+                    <div class="sg-swatch__note">Fondos secundarios y pies de tarjeta.</div>
+                </div>
+            </div>
+            <div class="sg-swatch">
+                <div class="sg-swatch__color bg-text"></div>
+                <div class="sg-swatch__meta">
+                    <div class="sg-swatch__hex">#1A1D23</div>
+                    <div>Texto</div>
+                    <div class="sg-swatch__note">Color de texto principal e inverso.</div>
+                </div>
+            </div>
+        </div>
+
+        <pre class="sg-code">/* Tokens de marca */
+--fv-green: #20EE03;  --fv-green-dark: #16B302;  --fv-green-ink: #0A5C01;
+--fv-purple: #8E00FF; --fv-purple-dark: #6E00C8; --fv-purple-soft: #F5EBFF;
+
+/* Semánticos */
+--color-primary: #8E00FF;  --color-primary-hover: #6E00C8;  --color-primary-soft: #F5EBFF;
+--color-accent: #20EE03;   --color-accent-ink: #0A5C01;
+
+/* Neutros */
+--bg: #F4F5F7;  --surface: #FFFFFF;  --surface-2: #F9FAFB;
+--border: #E4E7EC;  --border-strong: #D0D5DD;
+--text: #1A1D23;  --text-muted: #667085;  --text-inverse: #FFFFFF;</pre>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Tipografía</h2>
+        <p class="sg-note">Segoe UI con fallbacks del sistema, sin fuentes externas. Tamaños en una escala fija de <code>--fs-xs</code> a <code>--fs-2xl</code>.</p>
+        <div class="sg-demo stack stack--sm">
+            <h1 class="fs-2xl">Título 2xl</h1>
+            <h2 class="fs-xl">Título xl</h2>
+            <h3 class="fs-lg">Título lg</h3>
+            <p>Texto base usado en el cuerpo de la aplicación.</p>
+            <p class="text-muted">Texto secundario / muted para metadatos y ayudas.</p>
+            <p class="text-primary">Texto primario violeta para links y énfasis.</p>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Botones</h2>
+        <p class="sg-note">Usa <code>--primary</code> (violeta) para la acción principal, <code>--accent</code> (verde con texto negro) solo para realces, y <code>--secondary</code>/<code>--ghost</code> para acciones de apoyo. Mínimo táctil de 44px en tamaños base.</p>
+
+        <div class="sg-demo stack">
+            <div class="cluster">
+                <button class="btn btn--primary">Primario</button>
+                <button class="btn btn--accent">Acento</button>
+                <button class="btn btn--secondary">Secundario</button>
+                <button class="btn btn--ghost">Ghost</button>
+                <button class="btn btn--danger">Peligro</button>
+                <button class="btn btn--success">Éxito</button>
+            </div>
+            <div class="cluster">
+                <button class="btn btn--primary btn--sm">Pequeño</button>
+                <button class="btn btn--primary">Base</button>
+                <button class="btn btn--primary btn--lg">Grande</button>
+                <button class="btn btn--icon" title="Editar">&#9998;</button>
+                <button class="btn btn--icon btn--sm" title="Bloquear">&#10005;</button>
+            </div>
+            <div class="cluster">
+                <button class="btn btn--primary" disabled>Deshabilitado</button>
+                <button class="btn btn--accent" disabled>Acento deshabilitado</button>
+            </div>
+            <div class="sg-narrow">
+                <button class="btn btn--primary btn--block">Botón de ancho completo</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Formularios</h2>
+        <p class="sg-note">Campos con etiqueta, ayuda y error. El foco usa el violeta (<code>--color-primary</code>); el estado inválido usa rojo.</p>
+        <div class="sg-demo grid-2">
+            <div class="field">
+                <label class="field__label" for="sg-name">Nombre de pantalla</label>
+                <input class="input" id="sg-name" type="text" placeholder="Ej: Monitor Recepción">
+                <span class="field__hint">Normal: borde neutro y área táctil mínima de 44px.</span>
+            </div>
+            <div class="field">
+                <label class="field__label" for="sg-focus">Campo con foco</label>
+                <input class="input is-focused" id="sg-focus" type="text" value="Foco violeta visible">
+                <span class="field__hint">Foco: anillo violeta de 3px (<code>--color-primary-soft</code>).</span>
+            </div>
+            <div class="field field--invalid">
+                <label class="field__label" for="sg-invalid">Campo inválido</label>
+                <input class="input" id="sg-invalid" type="text" value="duracion-invalida">
+                <span class="field__error">El valor no es válido.</span>
+            </div>
+            <div class="field">
+                <label class="field__label" for="sg-select">Tipo de contenido</label>
+                <select class="select" id="sg-select">
+                    <option>Imagen</option>
+                    <option>Video</option>
+                </select>
+                <span class="field__hint">Select nativo con flecha propia.</span>
+            </div>
+            <div class="field">
+                <label class="field__label" for="sg-textarea">Descripción</label>
+                <textarea class="textarea" id="sg-textarea" placeholder="Texto de apoyo..."></textarea>
+            </div>
+            <div class="field">
+                <label class="field__label sr-only" for="sg-sronly">Campo accesible</label>
+                <input class="input" id="sg-sronly" type="text" placeholder="Etiqueta solo para lector de pantalla">
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Tarjetas y badges</h2>
+        <p class="sg-note">La tarjeta agrupa contenido con header, body y footer. Los badges etiquetan el tipo de medio: video (azulado), imagen (verde claro) o neutral.</p>
+        <div class="grid-2">
+            <div class="card">
+                <div class="card__header">
+                    <h3 class="card__title">Pantalla Principal</h3>
+                    <span class="badge badge--neutral">Borrador</span>
+                </div>
+                <div class="card__body">
+                    <div class="cluster cluster--sm">
+                        <span class="badge badge--video">Video</span>
+                        <span class="badge badge--image">Imagen</span>
+                        <span class="badge badge--neutral">Neutral</span>
+                    </div>
+                    <p class="text-muted">Contenido de la tarjeta con componentes del sistema.</p>
+                </div>
+                <div class="card__footer">
+                    <button class="btn btn--secondary btn--sm">Cancelar</button>
+                    <button class="btn btn--primary btn--sm">Guardar</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card__header">
+                    <h3 class="card__title">Resumen</h3>
+                </div>
+                <div class="card__body">
+                    <p>Tarjeta simple sin footer, útil para métricas o avisos.</p>
+                    <div class="cluster cluster--sm">
+                        <span class="badge badge--image">Imagen</span>
+                        <span class="badge badge--video">Video</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Indicadores de estado</h2>
+        <p class="sg-note">El <code>dot</code> comunica conectividad. Online usa el verde con una pulsación suave; offline es gris.</p>
+        <div class="sg-demo cluster">
+            <span class="cluster cluster--sm"><span class="dot dot--online"></span> En línea</span>
+            <span class="cluster cluster--sm"><span class="dot dot--offline"></span> Desconectado</span>
+            <span class="cluster cluster--sm"><span class="dot dot--accent"></span> Acento</span>
+            <span class="cluster cluster--sm"><span class="dot dot--warn"></span> Advertencia</span>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Filas de lista</h2>
+        <p class="sg-note">Cada fila tiene contenido principal (título y meta) y acciones a la derecha. En pantallas angostas las acciones bajan y envuelven sin desbordar.</p>
+        <div class="sg-demo">
+            <div class="row">
+                <span class="dot dot--online"></span>
+                <div class="row__main">
+                    <span class="row__title">Monitor Recepción</span>
+                    <span class="row__meta">
+                        <span>ID: A1B2C3D4</span>
+                        <span class="badge badge--neutral">Autorizada</span>
+                    </span>
+                </div>
+                <div class="row__actions">
+                    <button class="btn btn--secondary btn--sm" title="Renombrar">Renombrar</button>
+                    <button class="btn btn--danger btn--sm">Bloquear</button>
+                </div>
+            </div>
+            <div class="row">
+                <span class="dot dot--offline"></span>
+                <div class="row__main">
+                    <span class="row__title">Sala de Espera</span>
+                    <span class="row__meta">
+                        <span>ID: E5F6A7B8</span>
+                        <span class="badge badge--neutral">Sin autorizar</span>
+                    </span>
+                </div>
+                <div class="row__actions">
+                    <button class="btn btn--secondary btn--sm" title="Renombrar">Renombrar</button>
+                    <button class="btn btn--success btn--sm">Autorizar</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Modales</h2>
+        <p class="sg-note">Modal centrado, con ancho máximo y cuerpo con scroll. En la app se monta sobre <code>.modal</code> a pantalla completa; aquí se muestra embebido.</p>
+        <div class="modal modal--inline">
+            <div class="modal__panel">
+                <div class="modal__header">
+                    <h3 class="modal__title">Editar elemento</h3>
+                    <button class="btn btn--icon btn--sm" title="Cerrar">&#10005;</button>
+                </div>
+                <div class="modal__body">
+                    <div class="field">
+                        <label class="field__label" for="sg-modal-name">Nombre</label>
+                        <input class="input" id="sg-modal-name" type="text" value="Promo Vitaminas">
+                    </div>
+                    <div class="field">
+                        <label class="field__label" for="sg-modal-dur">Duración (segundos)</label>
+                        <input class="input" id="sg-modal-dur" type="number" value="10">
+                    </div>
+                </div>
+                <div class="modal__footer">
+                    <button class="btn btn--secondary">Cancelar</button>
+                    <button class="btn btn--primary">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Toasts</h2>
+        <p class="sg-note">Notificaciones no bloqueantes. En móvil aparecen abajo; en desktop, arriba a la derecha. Aquí se muestran embebidas.</p>
+        <div class="toast-stack toast-stack--inline">
+            <div class="toast toast--success">
+                <span class="toast__icon">&#10003;</span>
+                <div class="toast__body">
+                    <div class="toast__title">Cambios guardados</div>
+                    <div>La playlist se actualizó correctamente.</div>
+                </div>
+            </div>
+            <div class="toast toast--error">
+                <span class="toast__icon">&#10005;</span>
+                <div class="toast__body">
+                    <div class="toast__title">Error al subir</div>
+                    <div>El archivo supera el tamaño permitido.</div>
+                </div>
+            </div>
+            <div class="toast toast--info">
+                <span class="toast__icon">&#8505;</span>
+                <div class="toast__body">
+                    <div class="toast__title">Sincronizando</div>
+                    <div>Los cambios se aplicarán en unos segundos.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Tab bar móvil</h2>
+        <p class="sg-note">Navegación inferior para móvil, con padding para el safe-area. El helper <code>--desktop-hidden</code> la oculta desde 768px.</p>
+        <div class="phone">
+            <div class="phone__screen">
+                <div class="phone__content">
+                    <p>Contenido de la app en el área de la pantalla.</p>
+                </div>
+                <nav class="tabbar tabbar--inline">
+                    <a class="tabbar__item tabbar__item--active" href="#">
+                        <span class="tabbar__icon">&#9632;</span>
+                        <span>Pantallas</span>
+                    </a>
+                    <a class="tabbar__item" href="#">
+                        <span class="tabbar__icon">&#9654;</span>
+                        <span>Playlist</span>
+                    </a>
+                    <a class="tabbar__item" href="#">
+                        <span class="tabbar__icon">&#9881;</span>
+                        <span>Ajustes</span>
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Estado vacío</h2>
+        <p class="sg-note">Cuando no hay datos: ícono, título y una pista breve que explica el siguiente paso.</p>
+        <div class="empty">
+            <div class="empty__icon">&#128247;</div>
+            <div class="empty__title">Todavía no hay contenido</div>
+            <div class="empty__hint">Sube una imagen o un video para comenzar a armar la playlist.</div>
+            <button class="btn btn--primary">Subir contenido</button>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Progreso / overlay de subida</h2>
+        <p class="sg-note">La barra de progreso usa el verde como acento. El overlay bloquea la interacción mientras se sube archivos.</p>
+        <div class="stack">
+            <div class="sg-demo stack">
+                <div class="progress"><div class="progress__bar w-25"></div></div>
+                <div class="progress"><div class="progress__bar w-50"></div></div>
+                <div class="progress"><div class="progress__bar w-75"></div></div>
+                <div class="progress"><div class="progress__bar progress__bar--indeterminate"></div></div>
+            </div>
+            <div class="overlay overlay--inline">
+                <div class="overlay__panel">
+                    <div class="spinner"></div>
+                    <div class="stack stack--sm">
+                        <strong>Subiendo archivos...</strong>
+                        <span class="text-muted">No cierres esta ventana.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Pantalla de estado del TV</h2>
+        <p class="sg-note">Superficie oscura a pantalla completa para el reproductor. Aquí el verde SÍ puede usarse como texto (13.3:1 sobre fondo oscuro). Se muestra embebida con <code>--embed</code>.</p>
+        <div class="tv-status tv-status--embed">
+            <img class="tv-status__logo" src="img/imagotipo.png" alt="FarmaVid">
+            <h3 class="tv-status__title">No Autorizada</h3>
+            <p class="tv-status__desc">Esta pantalla todavía no fue autorizada. Ingresa el siguiente código en el panel de administración.</p>
+            <div class="tv-status__id">
+                <span class="tv-status__id-label">ID del dispositivo</span>
+                <span>A1B2-C3D4-E5F6</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Barra superior (app bar)</h2>
+        <p class="sg-note">Marca a la izquierda y acciones a la derecha. En móvil las acciones se envuelven debajo sin desbordar.</p>
+        <header class="appbar">
+            <div class="appbar__brand">
+                <img class="appbar__logo" src="img/logo.png" alt="FARMAVID">
+                <span class="appbar__title">Panel de Administración</span>
+            </div>
+            <div class="appbar__actions">
+                <button class="btn btn--secondary btn--sm">Plantillas</button>
+                <button class="btn btn--danger btn--sm">Salir</button>
+            </div>
+        </header>
+    </section>
+
+    <!-- ============================================================= -->
+    <section class="sg-section">
+        <h2 class="sg-section__title">Utilidades / grilla</h2>
+        <p class="sg-note"><code>stack</code> apila con espaciado vertical, <code>cluster</code> agrupa en horizontal con wrap y <code>grid-2</code> es una columna en móvil y dos desde 1024px.</p>
+        <div class="sg-demo stack">
+            <div class="cluster">
+                <span class="badge badge--neutral">cluster</span>
+                <span class="badge badge--neutral">envuelve</span>
+                <span class="badge badge--neutral">con wrap</span>
+            </div>
+            <div class="grid-2">
+                <div class="card"><div class="card__body"><p>Columna de grilla uno.</p></div></div>
+                <div class="card"><div class="card__body"><p>Columna de grilla dos.</p></div></div>
+            </div>
+            <div class="stack stack--sm">
+                <p>Solo el título del ejemplo.</p>
+                <span class="sr-only">Este texto solo lo leen los lectores de pantalla.</span>
+                <p class="text-muted">El texto <code>sr-only</code> no se ve, pero existe para accesibilidad.</p>
+            </div>
+        </div>
+    </section>
+
+</div>
+</body>
+</html>
