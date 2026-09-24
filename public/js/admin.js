@@ -62,6 +62,7 @@
         dom.uploadProgressBar = $('uploadProgressBar');
         dom.uploadProgressText = $('uploadProgressText');
         dom.playlistContainer = $('playlistContainer');
+        dom.previewBtn = $('previewBtn');
         dom.templateForm = $('templateForm');
         dom.templateName = $('templateName');
         dom.templateList = $('templateList');
@@ -128,6 +129,7 @@
         dom.uploadForm.addEventListener('submit', onSubmitUpload);
         dom.templateForm.addEventListener('submit', onSaveTemplate);
         $('saveOrderBtn').addEventListener('click', saveOrder);
+        $('previewBtn').addEventListener('click', openPreviewModal);
         $('clearPlaylistBtn').addEventListener('click', onClearPlaylist);
         dom.addUserForm.addEventListener('submit', onCreateUser);
     }
@@ -458,6 +460,7 @@
             })
             .catch(function (error) {
                 if (error.status === 401) return;
+                if (dom.previewBtn) dom.previewBtn.disabled = true;
                 container.textContent = '';
                 container.appendChild(emptyState('⚠️', 'No se pudo cargar', error.message));
             });
@@ -466,6 +469,8 @@
     function renderPlaylist() {
         var container = dom.playlistContainer;
         container.textContent = '';
+        // El boton "Previo" solo tiene sentido con elementos que reproducir.
+        updatePreviewButton();
         if (!state.playlist.length) {
             container.appendChild(emptyState('🎞️', 'La lista está vacía',
                 'Sube contenido para agregar elementos a este destino.'));
@@ -731,6 +736,338 @@
         var moved = state.playlist.splice(index, 1)[0];
         state.playlist.splice(target, 0, moved);
         renderPlaylist();
+    }
+
+    // --- Previo (vista previa del reproductor) ------------------------------
+    // Reproduce state.playlist (incluido el orden sin guardar) en un modal que
+    // espeja el reproductor real de tv.html: dos slots alternos y las mismas
+    // transiciones. No llama a la API ni modifica la playlist.
+    var PV_EFFECTS = {
+        'fade': true,
+        'slide-left': true,
+        'slide-right': true,
+        'zoom-in': true,
+        'none': true
+    };
+
+    function updatePreviewButton() {
+        if (!dom.previewBtn) return;
+        dom.previewBtn.disabled = !state.playlist.length;
+    }
+
+    function previewTargetLabel() {
+        if (state.target === 'ALL') return 'Global';
+        var screen = findScreen(state.target);
+        return screen ? (screen.name || screen.id) : state.target;
+    }
+
+    // Formatea milisegundos como m:ss (mismo criterio que muestra la TV).
+    function formatClock(ms) {
+        var totalSeconds = Math.max(0, Math.round((ms || 0) / 1000));
+        var minutes = Math.floor(totalSeconds / 60);
+        var seconds = totalSeconds % 60;
+        return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+    }
+
+    function openPreviewModal() {
+        if (!state.playlist.length) return;
+
+        // Bandera de cierre: corta callbacks asincronos (play/.catch) que podrian
+        // programar timers DESPUES de cerrar el modal.
+        var closed = false;
+
+        var slots = [
+            el('div', { className: 'pv-stage__slot' }),
+            el('div', { className: 'pv-stage__slot' })
+        ];
+        var stage = el('div', { className: 'pv-stage' }, slots);
+
+        var playBtn = el('button', {
+            className: 'btn btn--secondary',
+            text: 'Pausar',
+            attrs: { type: 'button' }
+        });
+        var prevBtn = el('button', {
+            className: 'btn btn--secondary btn--icon',
+            text: '⏮',
+            attrs: { type: 'button', 'aria-label': 'Anterior', title: 'Anterior' }
+        });
+        var nextBtn = el('button', {
+            className: 'btn btn--secondary btn--icon',
+            text: '⏭',
+            attrs: { type: 'button', 'aria-label': 'Siguiente', title: 'Siguiente' }
+        });
+
+        var progressBar = el('div', { className: 'progress__bar progress__bar--value' });
+        var progress = el('div', {
+            className: 'progress',
+            attrs: {
+                role: 'progressbar',
+                'aria-valuemin': '0',
+                'aria-valuemax': '100',
+                'aria-valuenow': '0'
+            }
+        }, [progressBar]);
+
+        var timeEl = el('span', { className: 'text-muted fs-sm', text: '0:00 / 0:00' });
+        var captionEl = el('span', { className: 'pv-controls__caption text-muted fs-sm' });
+
+        var controls = el('div', { className: 'pv-controls' }, [
+            el('div', { className: 'pv-controls__buttons' }, [prevBtn, playBtn, nextBtn]),
+            progress,
+            el('div', { className: 'pv-controls__status' }, [timeEl, captionEl])
+        ]);
+
+        // Estado del reproductor de previa.
+        var currentSlotIndex = 0;
+        var currentIndex = 0;
+        var currentVideo = null;
+        var mediaNodes = [];
+        var advanceTimer = null;
+        var tickTimer = null;
+        var itemDuration = 0;
+        var itemElapsed = 0;
+        var itemStart = 0;
+        var paused = false;
+
+        function stopTimers() {
+            if (advanceTimer) { window.clearTimeout(advanceTimer); advanceTimer = null; }
+            if (tickTimer) { window.clearInterval(tickTimer); tickTimer = null; }
+        }
+
+        function clearSlot(slot) {
+            var videos = slot.querySelectorAll('video');
+            Array.prototype.forEach.call(videos, function (video) {
+                video.pause();
+                video.removeAttribute('src');
+                video.load();
+            });
+            slot.textContent = '';
+        }
+
+        function pauseVideosIn(slot) {
+            var videos = slot.querySelectorAll('video');
+            Array.prototype.forEach.call(videos, function (video) {
+                if (!video.paused) video.pause();
+            });
+        }
+
+        function normalizeEffect(transition) {
+            return (transition && PV_EFFECTS[transition]) ? transition : 'fade';
+        }
+
+        function startTick() {
+            if (tickTimer) window.clearInterval(tickTimer);
+            tickTimer = window.setInterval(updateProgressUI, 200);
+        }
+
+        function skipSoon(ms) {
+            if (closed || paused) return;
+            if (advanceTimer) window.clearTimeout(advanceTimer);
+            advanceTimer = window.setTimeout(advance, ms);
+        }
+
+        function playVideo(video) {
+            var promise = video.play();
+            if (promise && promise.catch) {
+                promise.catch(function () {
+                    if (closed) return;
+                    video.muted = true;
+                    var retry = video.play();
+                    if (retry && retry.catch) retry.catch(function () { skipSoon(2000); });
+                });
+            }
+        }
+
+        function buildMedia(item) {
+            var src = ui.safeUrl(item.url);
+            var media;
+            if (item.type === 'video') {
+                media = el('video', {
+                    className: 'pv-stage__media',
+                    props: { muted: true, autoplay: true, playsInline: true }
+                });
+                media.addEventListener('ended', onMediaEnded);
+                media.addEventListener('error', onMediaError);
+            } else {
+                media = el('img', { className: 'pv-stage__media', attrs: { alt: '' } });
+                media.addEventListener('error', onMediaError);
+            }
+            if (src) media.src = src;
+            mediaNodes.push(media);
+            return media;
+        }
+
+        function updateCaption() {
+            var item = state.playlist[currentIndex];
+            if (!item) { captionEl.textContent = ''; return; }
+            captionEl.textContent = 'Ítem ' + (currentIndex + 1) + ' de ' +
+                state.playlist.length + ' · ' + (item.name || 'Sin nombre');
+        }
+
+        function updateProgressUI() {
+            var item = state.playlist[currentIndex];
+            if (!item) return;
+            var total = 0;
+            var elapsed = 0;
+            if (item.type === 'video' && currentVideo &&
+                isFinite(currentVideo.duration) && currentVideo.duration > 0) {
+                total = currentVideo.duration * 1000;
+                elapsed = currentVideo.currentTime * 1000;
+            } else if (item.type !== 'video') {
+                total = itemDuration;
+                elapsed = itemElapsed + (paused ? 0 : (Date.now() - itemStart));
+            }
+            var percent = total > 0 ? Math.max(0, Math.min(100, (elapsed / total) * 100)) : 0;
+            progressBar.style.setProperty('--progress', percent + '%');
+            progress.setAttribute('aria-valuenow', String(Math.round(percent)));
+            timeEl.textContent = formatClock(elapsed) + ' / ' + formatClock(total);
+        }
+
+        // Doble buffer: el item nuevo entra en el siguiente slot y el anterior
+        // sale animado. Espeja showCurrentItem() del reproductor.
+        function renderCurrent() {
+            if (closed) return;
+            var items = state.playlist;
+            if (!items.length) return;
+            var item = items[currentIndex];
+
+            stopTimers();
+
+            var nextSlotIndex = (currentSlotIndex + 1) % 2;
+            var currentSlot = slots[currentSlotIndex];
+            var nextSlot = slots[nextSlotIndex];
+
+            // El slot que sale conserva su cuadro durante la transicion; sus
+            // videos se pausan y su contenido se libera al reutilizar el slot.
+            pauseVideosIn(currentSlot);
+            clearSlot(nextSlot);
+
+            var media = buildMedia(item);
+            nextSlot.appendChild(media);
+
+            var effect = normalizeEffect(item.transition);
+            nextSlot.className = 'pv-stage__slot pv-effect-' + effect;
+            currentSlot.className = 'pv-stage__slot pv-effect-' + effect + ' is-exit';
+
+            void nextSlot.offsetWidth; // reflow: la transicion arranca en el proximo frame
+
+            nextSlot.classList.add('is-active');
+            currentSlot.classList.remove('is-active');
+
+            currentSlotIndex = nextSlotIndex;
+            updateCaption();
+
+            if (item.type === 'video') {
+                currentVideo = media;
+                itemDuration = 0;
+                itemElapsed = 0;
+                if (!paused) playVideo(media);
+            } else {
+                currentVideo = null;
+                itemDuration = Number(item.duration) > 0 ? Number(item.duration) : 5000;
+                itemElapsed = 0;
+                itemStart = Date.now();
+                if (!paused) advanceTimer = window.setTimeout(advance, itemDuration);
+            }
+
+            updateProgressUI();
+            if (!paused) startTick();
+        }
+
+        function advance() {
+            if (closed || !state.playlist.length) return;
+            currentIndex = (currentIndex + 1) % state.playlist.length;
+            renderCurrent();
+        }
+
+        function goPrevious() {
+            if (closed || !state.playlist.length) return;
+            currentIndex = (currentIndex - 1 + state.playlist.length) % state.playlist.length;
+            renderCurrent();
+        }
+
+        function pausePlayback() {
+            if (paused || closed) return;
+            paused = true;
+            var item = state.playlist[currentIndex];
+            if (item && item.type !== 'video') itemElapsed += Date.now() - itemStart;
+            stopTimers();
+            pauseVideosIn(slots[currentSlotIndex]);
+            playBtn.textContent = 'Reproducir';
+            updateProgressUI();
+        }
+
+        function resumePlayback() {
+            if (!paused || closed) return;
+            paused = false;
+            var item = state.playlist[currentIndex];
+            if (!item) return;
+            if (item.type === 'video') {
+                if (currentVideo) playVideo(currentVideo);
+            } else {
+                itemStart = Date.now();
+                advanceTimer = window.setTimeout(advance, Math.max(0, itemDuration - itemElapsed));
+            }
+            startTick();
+            playBtn.textContent = 'Pausar';
+            updateProgressUI();
+        }
+
+        function togglePlay() {
+            if (paused) resumePlayback(); else pausePlayback();
+        }
+
+        function onMediaEnded() { advance(); }
+
+        function onMediaError() { skipSoon(2000); }
+
+        function onKeyDown(event) {
+            if (closed) return;
+            if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                goPrevious();
+            } else if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                advance();
+            } else if (event.key === ' ' || event.key === 'Spacebar') {
+                event.preventDefault();
+                togglePlay();
+            }
+        }
+
+        // Limpieza total al cerrar: timers, listeners, video y slots.
+        function cleanup() {
+            closed = true;
+            stopTimers();
+            document.removeEventListener('keydown', onKeyDown);
+            mediaNodes.forEach(function (media) {
+                media.removeEventListener('ended', onMediaEnded);
+                media.removeEventListener('error', onMediaError);
+                if (media.tagName === 'VIDEO') {
+                    media.pause();
+                    media.removeAttribute('src');
+                    media.load();
+                }
+            });
+            mediaNodes = [];
+            clearSlot(slots[0]);
+            clearSlot(slots[1]);
+        }
+
+        playBtn.addEventListener('click', togglePlay);
+        prevBtn.addEventListener('click', goPrevious);
+        nextBtn.addEventListener('click', advance);
+        document.addEventListener('keydown', onKeyDown);
+
+        var handle = ui.openModal({
+            title: 'Previo · ' + previewTargetLabel(),
+            content: [stage, controls],
+            onClose: cleanup
+        });
+        handle.panel.classList.add('modal__panel--wide');
+
+        renderCurrent();
     }
 
     // --- Subida ---

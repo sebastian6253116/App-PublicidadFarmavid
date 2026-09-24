@@ -1630,3 +1630,137 @@ h1, h2, h3, h4, p {
         display: none;
     }
 }
+
+/* =========================================================================
+   20. Previo (vista previa del reproductor)
+   Espejo visual de tv.html / tv.css: el mismo par de slots alternos y las
+   mismas transiciones, para que el operador vea en el panel lo que vera la
+   TV. Se mantiene separado a proposito; si el motor del player se unifica,
+   estas reglas podrian compartirse con .effect-* de tv.css.
+   ========================================================================= */
+
+/* Variante ancha del modal: la escena 16:9 necesita mas ancho que un dialogo.
+   Sigue acotada por width:100% + el padding de .modal, asi que nunca desborda. */
+.modal__panel--wide {
+    max-width: 720px;
+}
+
+@media (min-width: 768px) {
+    .modal__panel--wide {
+        max-width: 900px;
+    }
+}
+
+/* Escena 16:9 con fondo negro, igual que la superficie de la TV. */
+.pv-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+/* Cada slot ocupa la escena completa y alterna con su par (doble buffer). */
+.pv-stage__slot {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+    transition: opacity 1s ease;
+    z-index: 0;
+}
+
+.pv-stage__slot.is-active {
+    opacity: 1;
+    z-index: 2;
+}
+
+/* El medio se ajusta con contain, exactamente como la TV (sin recortes). */
+.pv-stage__media {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Transiciones: espejo de .effect-* de tv.css. El orden importa: van despues
+   de .pv-stage__slot para ganar por cascada sin usar !important. */
+.pv-effect-fade {
+    transition: opacity 1.5s ease-in-out;
+}
+
+.pv-effect-slide-left {
+    transform: translateX(100%);
+    transition: transform .8s ease-out;
+    opacity: 1;
+}
+
+.pv-effect-slide-left.is-active {
+    transform: translateX(0);
+}
+
+.pv-effect-slide-left.is-exit {
+    transform: translateX(-100%);
+    z-index: 1;
+}
+
+.pv-effect-slide-right {
+    transform: translateX(-100%);
+    transition: transform .8s ease-out;
+    opacity: 1;
+}
+
+.pv-effect-slide-right.is-active {
+    transform: translateX(0);
+}
+
+.pv-effect-slide-right.is-exit {
+    transform: translateX(100%);
+    z-index: 1;
+}
+
+.pv-effect-zoom-in {
+    transform: scale(.8);
+    opacity: 0;
+    transition: all 1s ease;
+}
+
+.pv-effect-zoom-in.is-active {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.pv-effect-none {
+    transition: none;
+}
+
+/* Controles de reproduccion bajo la escena. */
+.pv-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+}
+
+.pv-controls__buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.pv-controls__status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-2);
+    min-width: 0;
+}
+
+.pv-controls__caption {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
