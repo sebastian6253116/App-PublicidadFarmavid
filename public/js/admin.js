@@ -73,12 +73,32 @@
 
         wireEvents();
 
-        // La sección de usuarios es sólo para admin (cosmético: el servidor no lo exige).
+        // ---------------------------------------------------------------------
+        // SECCIONES RESTRINGIDAS AL ADMIN.
+        //
+        // AVISO: esto es COSMETICO, NO es seguridad. El servidor todavia no valida
+        // el rol (todos los usuarios reciben el mismo token), asi que un no-admin
+        // puede llamar igual a la API desde la consola del navegador. La proteccion
+        // real llega con la Fase C: columna role + sesion con identidad +
+        // requireRole('admin') en el servidor.
+        // ---------------------------------------------------------------------
         if (!state.isAdmin) {
+            // Gestion de pantallas: autorizar, bloquear, renombrar y eliminar.
+            // El selector "Destino" NO se toca: lo necesitan para publicar contenido.
+            var screensPanel = document.querySelector('.admin-panel--screens');
+            if (screensPanel && screensPanel.parentNode) screensPanel.parentNode.removeChild(screensPanel);
+            var screensTab = dom.tabbar.querySelector('[data-tab="pantallas"]');
+            if (screensTab && screensTab.parentNode) screensTab.parentNode.removeChild(screensTab);
+            dom.screenList = null;
+
+            // Gestion de usuarios (ya estaba restringida).
             if (dom.usersPanel && dom.usersPanel.parentNode) dom.usersPanel.parentNode.removeChild(dom.usersPanel);
             var usersTab = dom.tabbar.querySelector('[data-tab="usuarios"]');
             if (usersTab && usersTab.parentNode) usersTab.parentNode.removeChild(usersTab);
-            setActiveTab('pantallas');
+
+            // La pestana activa por defecto era "pantallas", que ya no existe: nos
+            // movemos a "contenido", que es lo que un operador necesita para subir.
+            setActiveTab('contenido');
         }
 
         loadScreens().then(function () {
@@ -138,6 +158,8 @@
     }
 
     function renderScreens() {
+        // Si el usuario no es admin, la lista se removio del DOM: no hay nada que pintar.
+        if (!dom.screenList) return;
         dom.screenList.textContent = '';
         if (!state.screens.length) {
             dom.screenList.appendChild(emptyState('📡', 'No hay pantallas',
